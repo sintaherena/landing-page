@@ -1,0 +1,2693 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SearchPoint — The Desktop Knowledge Layer for Enterprise & AI</title>
+  <meta name="description" content="Connect local storage, OneDrive, Outlook, and SharePoint into one unified index. Ground your favorite LLMs with verified, permission-aware company knowledge without leaking sensitive data." />
+  <link rel="icon" href="assets/images/hyperjump.png" type="image/png" />
+  <meta name="theme-color" content="#dc2626" />
+
+  <!-- Google Fonts: Manrope + IBM Plex Serif -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="assets/css/tailwind.css" />
+  <link rel="stylesheet" href="assets/css/custom.css" />
+
+  <!-- Interactive connector atlas (page-scoped) -->
+  <style>
+    #connectors .cl-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 26px;
+    }
+
+    #connectors .cl-filter {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 7px 14px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.03);
+      color: rgba(255, 255, 255, 0.6);
+      font-family: var(--font-primary);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      cursor: pointer;
+      transition: color 0.25s ease, border-color 0.25s ease, background 0.25s ease, transform 0.25s ease;
+    }
+
+    #connectors .cl-filter:hover {
+      color: #fff;
+      border-color: rgba(255, 255, 255, 0.24);
+      background: rgba(255, 255, 255, 0.07);
+      transform: translateY(-1px);
+    }
+
+    #connectors .cl-filter.is-active {
+      color: #fff;
+      border-color: rgba(220, 38, 38, 0.55);
+      background: linear-gradient(135deg, rgba(220, 38, 38, 0.26), rgba(220, 38, 38, 0.08));
+      box-shadow: 0 0 24px rgba(220, 38, 38, 0.18);
+    }
+
+    #connectors .cl-filter-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.4);
+      transition: background 0.25s ease, box-shadow 0.25s ease;
+    }
+
+    #connectors .cl-filter.is-active .cl-filter-dot {
+      background: #ef4444;
+      box-shadow: 0 0 8px #ef4444;
+    }
+
+    #connectors .cl-filter[data-filter="ms"] .cl-filter-dot { background: #38bdf8; }
+    #connectors .cl-filter[data-filter="identity"] .cl-filter-dot { background: #8b5cf6; }
+    #connectors .cl-filter[data-filter="secrets"] .cl-filter-dot { background: #f59e0b; }
+    #connectors .cl-filter[data-filter="device"] .cl-filter-dot { background: #22d3ee; }
+    #connectors .cl-filter[data-filter="messaging"] .cl-filter-dot { background: #4ade80; }
+    #connectors .cl-filter[data-filter="workspace"] .cl-filter-dot { background: #f87171; }
+
+    #connectors .cl-atlas {
+      display: grid;
+      grid-template-columns: minmax(0, 1.08fr) minmax(280px, 0.92fr);
+      align-items: center;
+      gap: clamp(24px, 4vw, 56px);
+      margin-top: 52px;
+      text-align: left;
+    }
+
+    #connectors .cl-stage {
+      position: relative;
+      width: min(100%, 560px);
+      aspect-ratio: 1 / 1;
+      margin: 0 auto;
+    }
+
+    #connectors .cl-links {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    #connectors .cl-links line {
+      stroke: rgba(255, 255, 255, 0.12);
+      stroke-width: 1;
+      stroke-dasharray: 2 7;
+      animation: cl-dash 1.8s linear infinite;
+      transition: stroke 0.3s ease, stroke-width 0.3s ease;
+    }
+
+    #connectors .cl-links line.is-active {
+      stroke: rgba(239, 68, 68, 0.7);
+      stroke-width: 1.4;
+      stroke-dasharray: 5 6;
+      filter: drop-shadow(0 0 4px rgba(239, 68, 68, 0.6));
+      animation-duration: 0.9s;
+    }
+
+    @keyframes cl-dash {
+      to { stroke-dashoffset: -18; }
+    }
+
+    #connectors .cl-ring {
+      position: absolute;
+      border-radius: 50%;
+      pointer-events: none;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      z-index: 0;
+    }
+
+    #connectors .cl-ring--outer {
+      inset: 2%;
+      border-style: dashed;
+      animation: cl-spin 52s linear infinite;
+    }
+
+    #connectors .cl-ring--mid {
+      inset: 14%;
+      border-color: rgba(255, 255, 255, 0.06);
+      animation: cl-spin-rev 38s linear infinite;
+    }
+
+    #connectors .cl-ring--inner {
+      inset: 28%;
+      border-style: dashed;
+      border-color: rgba(220, 38, 38, 0.16);
+      animation: cl-spin 28s linear infinite;
+    }
+
+    #connectors .cl-ring::before,
+    #connectors .cl-ring::after {
+      content: "";
+      position: absolute;
+      top: -2.5px;
+      left: calc(50% - 2.5px);
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #ef4444;
+      box-shadow: 0 0 10px #ef4444;
+    }
+
+    #connectors .cl-ring::after {
+      top: auto;
+      bottom: -2.5px;
+      background: #8b5cf6;
+      box-shadow: 0 0 10px #8b5cf6;
+    }
+
+    @keyframes cl-spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes cl-spin-rev {
+      to { transform: rotate(-360deg); }
+    }
+
+    #connectors .cl-core-wrap {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      z-index: 3;
+      display: grid;
+      place-items: center;
+      width: 146px;
+      height: 146px;
+      transform: translate(-50%, -50%);
+    }
+
+    #connectors .cl-core {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      width: 118px;
+      height: 118px;
+      border: 1px solid rgba(220, 38, 38, 0.45);
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 25%, #2a2a38, #0d0d12 72%);
+      box-shadow: 0 0 62px rgba(220, 38, 38, 0.32), inset 0 0 32px rgba(220, 38, 38, 0.08);
+    }
+
+    #connectors .cl-core-line1 {
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+    }
+
+    #connectors .cl-core-line2 {
+      color: #ef4444;
+      font-family: var(--font-primary);
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.3em;
+    }
+
+    #connectors .cl-core-tag {
+      margin-top: 2px;
+      color: rgba(255, 255, 255, 0.35);
+      font-size: 7px;
+      font-weight: 600;
+      letter-spacing: 0.32em;
+    }
+
+    #connectors .cl-core-pulse {
+      position: absolute;
+      inset: 8px;
+      border: 1px solid rgba(220, 38, 38, 0.35);
+      border-radius: 50%;
+      animation: cl-pulse 3.6s ease-out infinite;
+    }
+
+    #connectors .cl-core-pulse:nth-of-type(2) {
+      animation-delay: 1.8s;
+    }
+
+    #connectors .cl-core-halo {
+      position: absolute;
+      inset: 20px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(220, 38, 38, 0.35), transparent 70%);
+      filter: blur(18px);
+      animation: cl-breathe 4s ease-in-out infinite;
+    }
+
+    @keyframes cl-pulse {
+      0% { transform: scale(0.92); opacity: 0.7; }
+      80%, 100% { transform: scale(1.38); opacity: 0; }
+    }
+
+    @keyframes cl-breathe {
+      0%, 100% { opacity: 0.65; transform: scale(0.94); }
+      50% { opacity: 1; transform: scale(1.06); }
+    }
+
+    #connectors .cl-node {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      z-index: 4;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 7px;
+      padding: 0;
+      border: 0;
+      background: none;
+      color: inherit;
+      font-family: var(--font-primary);
+      cursor: pointer;
+      opacity: 0;
+      transform: translate(-50%, -50%);
+      transition: opacity 0.35s ease, filter 0.35s ease;
+      animation: cl-float 7s ease-in-out infinite;
+      animation-delay: var(--d, 0ms);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #connectors .cl-stage.is-ready .cl-node {
+      opacity: 1;
+    }
+
+    @keyframes cl-float {
+      0%, 100% { transform: translate(-50%, -50%) translateY(0); }
+      50% { transform: translate(-50%, -50%) translateY(-5px); }
+    }
+
+    #connectors .cl-node-orb {
+      position: relative;
+      display: grid;
+      place-items: center;
+      width: 48px;
+      height: 48px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 16px;
+      background: linear-gradient(145deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.02));
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    #connectors .cl-node-icon {
+      display: grid;
+      place-items: center;
+      width: 22px;
+      height: 22px;
+      color: var(--accent, #fff);
+    }
+
+    #connectors .cl-node-icon svg {
+      width: 19px;
+      height: 19px;
+      transition: transform 0.3s ease;
+    }
+
+    #connectors .cl-node-halo {
+      position: absolute;
+      inset: -9px;
+      border-radius: 22px;
+      background: radial-gradient(circle, var(--accent, #ef4444), transparent 70%);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+    }
+
+    #connectors .cl-node:hover .cl-node-orb,
+    #connectors .cl-node:focus-visible .cl-node-orb {
+      transform: translateY(-3px) scale(1.09);
+      border-color: var(--accent, #fff);
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.4), 0 0 26px -6px var(--accent, #ef4444);
+    }
+
+    #connectors .cl-node:hover .cl-node-halo,
+    #connectors .cl-node:focus-visible .cl-node-halo {
+      opacity: 0.55;
+    }
+
+    #connectors .cl-node.is-active .cl-node-orb {
+      transform: scale(1.1);
+      border-color: var(--accent, #fff);
+      box-shadow: 0 0 0 1px var(--accent, #ef4444), 0 0 30px -4px var(--accent, #ef4444);
+    }
+
+    #connectors .cl-node.is-active .cl-node-icon svg {
+      transform: scale(1.12);
+    }
+
+    #connectors .cl-node.is-active .cl-node-halo {
+      opacity: 0.85;
+      animation: cl-halo 2.2s ease-in-out infinite;
+    }
+
+    @keyframes cl-halo {
+      0%, 100% { transform: scale(0.96); opacity: 0.5; }
+      50% { transform: scale(1.12); opacity: 0.9; }
+    }
+
+    #connectors .cl-node-text {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1px;
+      line-height: 1.15;
+      pointer-events: none;
+    }
+
+    #connectors .cl-node-name {
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 11px;
+      font-weight: 600;
+      white-space: nowrap;
+      text-shadow: 0 2px 10px #000;
+      transition: color 0.25s ease;
+    }
+
+    #connectors .cl-node-cat {
+      color: rgba(255, 255, 255, 0.36);
+      font-size: 9px;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    #connectors .cl-node.is-active .cl-node-name {
+      color: #fff;
+    }
+
+    #connectors .cl-node.is-dim {
+      filter: saturate(0.2);
+    }
+
+    #connectors .cl-stage.is-ready .cl-node.is-dim {
+      opacity: 0.26;
+    }
+
+    #connectors .cl-node.is-dim:hover {
+      filter: saturate(0.6);
+    }
+
+    #connectors .cl-stage.is-ready .cl-node.is-dim:hover {
+      opacity: 0.7;
+    }
+
+    #connectors .cl-node-soon {
+      position: absolute;
+      top: -6px;
+      right: -10px;
+      z-index: 2;
+      padding: 2px 6px;
+      border: 1px solid rgba(245, 158, 11, 0.35);
+      border-radius: 999px;
+      background: rgba(245, 158, 11, 0.16);
+      color: #fbbf24;
+      font-size: 7px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      backdrop-filter: blur(6px);
+    }
+
+    #connectors .cl-panel {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      min-height: 392px;
+      padding: 26px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 22px;
+      background: linear-gradient(160deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.014));
+      box-shadow: 0 24px 70px rgba(0, 0, 0, 0.35);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+    }
+
+    #connectors .cl-panel::before {
+      content: "";
+      position: absolute;
+      inset: 0 0 auto 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--accent, #ef4444), transparent);
+      opacity: 0.85;
+    }
+
+    #connectors .cl-panel-body {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      animation: cl-panel-in 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    @keyframes cl-panel-in {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    #connectors .cl-panel-top {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    #connectors .cl-panel-icon {
+      display: grid;
+      flex: none;
+      place-items: center;
+      width: 46px;
+      height: 46px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--accent, #ef4444);
+      box-shadow: 0 0 26px -10px var(--accent, #ef4444);
+    }
+
+    #connectors .cl-panel-icon svg {
+      width: 21px;
+      height: 21px;
+    }
+
+    #connectors .cl-panel-heading {
+      min-width: 0;
+    }
+
+    #connectors .cl-panel-kicker {
+      display: block;
+      color: var(--accent, #ef4444);
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+
+    #connectors .cl-panel-title {
+      margin: 1px 0 0;
+      color: #fff;
+      font-family: var(--font-display);
+      font-size: 21px;
+      font-weight: 300;
+      letter-spacing: -0.01em;
+    }
+
+    #connectors .cl-panel-cat {
+      display: block;
+      margin-top: 2px;
+      color: rgba(255, 255, 255, 0.42);
+      font-size: 10px;
+      font-weight: 500;
+    }
+
+    #connectors .cl-panel-desc {
+      margin-top: 18px;
+      color: rgba(255, 255, 255, 0.62);
+      font-size: 12.5px;
+      font-weight: 300;
+      line-height: 1.6;
+    }
+
+    #connectors .cl-specs {
+      margin-top: 18px;
+      border-top: 1px solid rgba(255, 255, 255, 0.07);
+    }
+
+    #connectors .cl-spec {
+      display: grid;
+      grid-template-columns: 82px minmax(0, 1fr);
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    #connectors .cl-spec dt {
+      color: rgba(255, 255, 255, 0.4);
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    #connectors .cl-spec dd {
+      margin: 0;
+      color: rgba(255, 255, 255, 0.78);
+      font-size: 11.5px;
+      font-weight: 400;
+      line-height: 1.4;
+    }
+
+    #connectors .cl-panel-foot {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-top: auto;
+      padding-top: 18px;
+    }
+
+    #connectors .cl-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 4px 9px;
+      border: 1px solid rgba(52, 211, 153, 0.22);
+      border-radius: 999px;
+      background: rgba(52, 211, 153, 0.08);
+      color: #6ee7b7;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    #connectors .cl-status i {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #34d399;
+      box-shadow: 0 0 8px #34d399;
+      animation: cl-blink 2s ease-in-out infinite;
+    }
+
+    #connectors .cl-status.is-soon {
+      border-color: rgba(245, 158, 11, 0.25);
+      background: rgba(245, 158, 11, 0.08);
+      color: #fbbf24;
+    }
+
+    #connectors .cl-status.is-soon i {
+      background: #f59e0b;
+      box-shadow: 0 0 8px #f59e0b;
+    }
+
+    @keyframes cl-blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.35; }
+    }
+
+    #connectors .cl-panel-hint {
+      color: rgba(255, 255, 255, 0.28);
+      font-size: 9.5px;
+      line-height: 1.4;
+    }
+
+    #connectors .cl-pair {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      margin-top: 34px;
+      text-align: left;
+    }
+
+    #connectors .cl-plane {
+      position: relative;
+      padding: 22px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      border-radius: 20px;
+      background: linear-gradient(150deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.012));
+      transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    #connectors .cl-plane::after {
+      content: "";
+      position: absolute;
+      top: -110px;
+      right: -90px;
+      width: 230px;
+      height: 230px;
+      border-radius: 50%;
+      background: radial-gradient(circle, var(--accent, #ef4444), transparent 68%);
+      opacity: 0.14;
+      pointer-events: none;
+      transition: opacity 0.3s ease, transform 0.5s ease;
+    }
+
+    #connectors .cl-plane:hover {
+      transform: translateY(-3px);
+      border-color: var(--accent, #ef4444);
+      box-shadow: 0 18px 50px -24px var(--accent, #ef4444);
+    }
+
+    #connectors .cl-plane:hover::after {
+      opacity: 0.24;
+      transform: scale(1.12);
+    }
+
+    #connectors .cl-plane--identity { --accent: #8b5cf6; }
+    #connectors .cl-plane--secrets { --accent: #f59e0b; }
+
+    #connectors .cl-plane-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    #connectors .cl-plane-icon {
+      display: grid;
+      place-items: center;
+      width: 40px;
+      height: 40px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--accent, #ef4444);
+    }
+
+    #connectors .cl-plane-icon svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    #connectors .cl-plane-badge {
+      padding: 4px 9px;
+      border: 1px solid currentColor;
+      border-radius: 999px;
+      color: var(--accent, #ef4444);
+      font-size: 8px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      opacity: 0.9;
+    }
+
+    #connectors .cl-plane-title {
+      margin: 14px 0 0;
+      color: #fff;
+      font-family: var(--font-display);
+      font-size: 20px;
+      font-weight: 300;
+    }
+
+    #connectors .cl-plane-desc {
+      margin-top: 8px;
+      color: rgba(255, 255, 255, 0.58);
+      font-size: 12px;
+      font-weight: 300;
+      line-height: 1.6;
+    }
+
+    #connectors .cl-plane-list {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      margin: 16px 0 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    #connectors .cl-plane-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      color: rgba(255, 255, 255, 0.72);
+      font-size: 11.5px;
+      line-height: 1.45;
+    }
+
+    #connectors .cl-plane-tick {
+      display: grid;
+      flex: none;
+      place-items: center;
+      width: 15px;
+      height: 15px;
+      margin-top: 1px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--accent, #ef4444);
+    }
+
+    #connectors .cl-plane-tick svg {
+      width: 9px;
+      height: 9px;
+    }
+
+    #connectors .cl-plane-note {
+      margin-top: 16px;
+      padding-top: 13px;
+      border-top: 1px solid rgba(255, 255, 255, 0.07);
+      color: var(--accent, #ef4444);
+      font-size: 10.5px;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+    }
+
+    [data-theme="light"] #connectors .cl-filter {
+      border-color: rgba(15, 23, 42, 0.12);
+      background: rgba(15, 23, 42, 0.03);
+      color: rgba(15, 23, 42, 0.58);
+    }
+
+    [data-theme="light"] #connectors .cl-filter:hover {
+      color: #0f172a;
+      border-color: rgba(15, 23, 42, 0.25);
+      background: rgba(15, 23, 42, 0.06);
+    }
+
+    [data-theme="light"] #connectors .cl-filter.is-active {
+      color: #b91c1c;
+      border-color: rgba(220, 38, 38, 0.35);
+      background: rgba(220, 38, 38, 0.08);
+      box-shadow: 0 0 24px rgba(220, 38, 38, 0.1);
+    }
+
+    [data-theme="light"] #connectors .cl-ring {
+      border-color: rgba(15, 23, 42, 0.1);
+    }
+
+    [data-theme="light"] #connectors .cl-ring--inner {
+      border-color: rgba(220, 38, 38, 0.18);
+    }
+
+    [data-theme="light"] #connectors .cl-links line {
+      stroke: rgba(15, 23, 42, 0.14);
+    }
+
+    [data-theme="light"] #connectors .cl-links line.is-active {
+      stroke: rgba(220, 38, 38, 0.55);
+    }
+
+    [data-theme="light"] #connectors .cl-node-orb {
+      border-color: rgba(15, 23, 42, 0.12);
+      background: linear-gradient(145deg, #ffffff, #f1f5f9);
+      box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
+    }
+
+    [data-theme="light"] #connectors .cl-node-name { color: #1e293b; text-shadow: none; }
+    [data-theme="light"] #connectors .cl-node-cat { color: rgba(15, 23, 42, 0.45); }
+    [data-theme="light"] #connectors .cl-node.is-active .cl-node-name { color: #0f172a; }
+
+    [data-theme="light"] #connectors .cl-core {
+      background: radial-gradient(circle at 35% 25%, #ffffff, #f8fafc 72%);
+      border-color: rgba(220, 38, 38, 0.4);
+      box-shadow: 0 0 54px rgba(220, 38, 38, 0.16);
+    }
+
+    [data-theme="light"] #connectors .cl-core-line1 { color: #111827; }
+    [data-theme="light"] #connectors .cl-core-tag { color: rgba(15, 23, 42, 0.36); }
+    [data-theme="light"] #connectors .cl-core-halo { opacity: 0.55; }
+
+    [data-theme="light"] #connectors .cl-panel {
+      border-color: rgba(15, 23, 42, 0.1);
+      background: linear-gradient(160deg, rgba(255, 255, 255, 0.92), rgba(248, 250, 252, 0.78));
+      box-shadow: 0 24px 60px rgba(15, 23, 42, 0.1);
+    }
+
+    [data-theme="light"] #connectors .cl-panel-icon {
+      border-color: rgba(15, 23, 42, 0.1);
+      background: rgba(15, 23, 42, 0.04);
+    }
+
+    [data-theme="light"] #connectors .cl-panel-title { color: #0f172a; }
+    [data-theme="light"] #connectors .cl-panel-cat { color: rgba(15, 23, 42, 0.5); }
+    [data-theme="light"] #connectors .cl-panel-desc { color: #475569; }
+    [data-theme="light"] #connectors .cl-specs { border-top-color: rgba(15, 23, 42, 0.08); }
+    [data-theme="light"] #connectors .cl-spec { border-bottom-color: rgba(15, 23, 42, 0.07); }
+    [data-theme="light"] #connectors .cl-spec dt { color: rgba(15, 23, 42, 0.45); }
+    [data-theme="light"] #connectors .cl-spec dd { color: #334155; }
+    [data-theme="light"] #connectors .cl-panel-hint { color: rgba(15, 23, 42, 0.4); }
+
+    [data-theme="light"] #connectors .cl-plane {
+      border-color: rgba(15, 23, 42, 0.1);
+      background: linear-gradient(150deg, rgba(255, 255, 255, 0.9), rgba(248, 250, 252, 0.7));
+    }
+
+    [data-theme="light"] #connectors .cl-plane-icon {
+      border-color: rgba(15, 23, 42, 0.1);
+      background: rgba(15, 23, 42, 0.04);
+    }
+
+    [data-theme="light"] #connectors .cl-plane-title { color: #0f172a; }
+    [data-theme="light"] #connectors .cl-plane-desc { color: #475569; }
+    [data-theme="light"] #connectors .cl-plane-list li { color: #334155; }
+    [data-theme="light"] #connectors .cl-plane-tick { background: rgba(15, 23, 42, 0.05); }
+    [data-theme="light"] #connectors .cl-plane-note { border-top-color: rgba(15, 23, 42, 0.08); }
+
+    @media (max-width: 900px) {
+      #connectors .cl-atlas {
+        grid-template-columns: 1fr;
+        gap: 30px;
+      }
+
+      #connectors .cl-panel {
+        width: 100%;
+        max-width: 560px;
+        margin: 0 auto;
+      }
+    }
+
+    @media (max-width: 640px) {
+      #connectors .cl-node-text {
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        z-index: 6;
+        display: none;
+        margin-top: 6px;
+        padding: 4px 8px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 8px;
+        background: rgba(10, 10, 12, 0.92);
+        transform: translateX(-50%);
+      }
+
+      #connectors .cl-node.is-active .cl-node-text {
+        display: flex;
+      }
+
+      #connectors .cl-node-cat {
+        display: none;
+      }
+
+      #connectors .cl-core-wrap {
+        width: 122px;
+        height: 122px;
+      }
+
+      #connectors .cl-core {
+        width: 98px;
+        height: 98px;
+      }
+
+      #connectors .cl-core-line1 { font-size: 10px; }
+      #connectors .cl-core-line2 { font-size: 8px; }
+      #connectors .cl-core-tag { font-size: 6px; }
+
+      [data-theme="light"] #connectors .cl-node-text {
+        border-color: rgba(15, 23, 42, 0.12);
+        background: rgba(255, 255, 255, 0.96);
+      }
+
+      #connectors .cl-pair {
+        grid-template-columns: 1fr;
+      }
+
+      #connectors .cl-panel {
+        min-height: 340px;
+        padding: 22px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      #connectors .cl-node,
+      #connectors .cl-ring,
+      #connectors .cl-core-pulse,
+      #connectors .cl-core-halo,
+      #connectors .cl-node-halo,
+      #connectors .cl-links line,
+      #connectors .cl-status i,
+      #connectors .cl-panel-body {
+        animation: none !important;
+      }
+
+      #connectors .cl-node,
+      #connectors .cl-plane,
+      #connectors .cl-node-orb {
+        transition: none !important;
+      }
+    }
+  </style>
+
+  <!-- Download CTA: orbiting MCP connector logos (Nalar-style) -->
+  <style>
+    #download {
+      position: relative;
+      isolation: isolate;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 600px;
+      padding: 96px 0 128px;
+      overflow: hidden;
+    }
+
+    #download::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background: radial-gradient(ellipse 62% 52% at 50% 34%, rgba(220, 38, 38, 0.16), transparent 72%);
+    }
+
+    #download .dl-orbit {
+      position: absolute;
+      left: 50%;
+      top: -470px;
+      width: 900px;
+      height: 900px;
+      transform: translateX(-50%) scale(var(--dl-scale, 1));
+      transform-origin: 50% 0;
+      z-index: 0;
+      pointer-events: none;
+      -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 16%, #000 60%, transparent 92%);
+      mask-image: linear-gradient(to bottom, transparent 0%, #000 16%, #000 60%, transparent 92%);
+    }
+
+    #download .dl-ring {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: var(--size);
+      height: var(--size);
+      margin: calc(var(--size) / -2) 0 0 calc(var(--size) / -2);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 50%;
+      animation: dl-spin var(--dur) linear infinite;
+    }
+
+    #download .dl-ring--outer { --size: 760px; --dur: 34s; }
+    #download .dl-ring--mid { --size: 540px; --dur: 26s; }
+    #download .dl-ring--inner { --size: 320px; --dur: 18s; }
+    #download .dl-ring[data-dir="rev"] { animation-name: dl-spin-rev; }
+
+    #download .dl-node {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 0;
+      height: 0;
+      transform: rotate(var(--a)) translateX(var(--r)) rotate(calc(-1 * var(--a)));
+    }
+
+    #download .dl-tile {
+      position: absolute;
+      left: 0;
+      top: 0;
+      display: grid;
+      place-items: center;
+      width: 54px;
+      height: 54px;
+      margin: -27px 0 0 -27px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 16px;
+      background: linear-gradient(145deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.02));
+      box-shadow: 0 10px 26px rgba(0, 0, 0, 0.4), 0 0 24px -8px var(--accent);
+      color: var(--accent);
+      animation: dl-spin var(--dur) linear infinite;
+    }
+
+    #download .dl-ring[data-dir="fwd"] .dl-tile { animation-name: dl-spin-rev; }
+    #download .dl-tile svg { width: 22px; height: 22px; }
+
+    #download .dl-btn {
+      height: 52px;
+      padding-inline: 26px;
+      white-space: nowrap;
+    }
+
+    @keyframes dl-spin { to { transform: rotate(360deg); } }
+    @keyframes dl-spin-rev { to { transform: rotate(-360deg); } }
+
+    [data-theme="light"] #download::before {
+      background: radial-gradient(ellipse 62% 52% at 50% 34%, rgba(220, 38, 38, 0.1), transparent 72%);
+    }
+
+    [data-theme="light"] #download .dl-ring { border-color: rgba(15, 23, 42, 0.08); }
+
+    [data-theme="light"] #download .dl-tile {
+      border-color: rgba(15, 23, 42, 0.1);
+      background: linear-gradient(145deg, #ffffff, #f8fafc);
+      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08), 0 0 20px -10px var(--accent);
+    }
+
+    @media (max-width: 900px) {
+      #download { min-height: 560px; padding: 80px 0 112px; }
+      #download .dl-orbit { --dl-scale: 0.78; top: -400px; }
+    }
+
+    @media (max-width: 640px) {
+      #download { min-height: 520px; padding: 68px 0 96px; }
+      #download .dl-orbit { --dl-scale: 0.56; top: -300px; }
+      #download .dl-tile { width: 46px; height: 46px; margin: -23px 0 0 -23px; border-radius: 14px; }
+      #download .dl-tile svg { width: 19px; height: 19px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      #download .dl-ring,
+      #download .dl-tile { animation: none !important; }
+    }
+  </style>
+</head>
+<body class="font-primary font-light h-full bg-[#0a0a0c] text-white">
+  <div class="nx-new relative isolate min-h-screen overflow-x-clip bg-[#0a0a0c]">
+
+    <!-- =========================================================================
+         HEADER / NAVBAR (Frosted Glass with Bilingual & Theme Switchers)
+         ========================================================================= -->
+    <header class="fixed inset-x-0 top-0 z-50 pt-3 md:pt-4">
+      <div class="sp-container relative transition-[max-width] duration-500 ease-out">
+        <div aria-hidden="true" class="absolute inset-0 rounded-full transition-opacity duration-300 pointer-events-none theme-glass-nav" style="opacity:0;"></div>
+        <nav class="relative flex items-center justify-between transition-[height] duration-300 h-[68px]">
+          <!-- Brand Logo (mark only, no company name) -->
+          <a aria-label="SearchPoint home" class="shrink-0 flex items-center gap-2.5" href="#">
+            <img src="assets/images/hyperjump-white-mark.png" alt="Hyperjump" class="header-logo-img h-6 md:h-7 w-auto object-contain opacity-90 transition-all" />
+            <span class="text-white/30 font-light">|</span>
+            <span class="font-display font-medium text-lg tracking-tight text-white flex items-center gap-1">
+              SearchPoint<span class="text-[#dc2626]">.</span>
+            </span>
+          </a>
+
+          <!-- Navigation Links -->
+          <ul data-nav-links class="absolute left-1/2 hidden -translate-x-1/2 items-center gap-[30px] xl:gap-[42px]">
+            <li><a href="#desktop-search" class="text-body text-[14px] leading-[1.25] font-medium text-white/60 transition-colors hover:text-white" data-i18n="nav.search">Desktop Search</a></li>
+            <li><a href="#features" class="text-body text-[14px] leading-[1.25] font-medium text-white/60 transition-colors hover:text-white" data-i18n="nav.features">Capabilities</a></li>
+            <li><a href="#architecture" class="text-body text-[14px] leading-[1.25] font-medium text-white/60 transition-colors hover:text-white" data-i18n="nav.arch">Architecture</a></li>
+            <li><a href="#security" class="text-body text-[14px] leading-[1.25] font-medium text-white/60 transition-colors hover:text-white" data-i18n="nav.security">Purview &amp; Security</a></li>
+            <li><a href="#faq" class="text-body text-[14px] leading-[1.25] font-medium text-white/60 transition-colors hover:text-white" data-i18n="nav.faq">Client FAQ</a></li>
+          </ul>
+
+          <!-- Right Controls -->
+          <div class="flex items-center gap-2 sm:gap-2.5">
+            <!-- Desktop Controls: Language + Theme + Get App + Sign In -->
+            <div data-nav-desktop class="hidden items-center gap-2.5">
+              <!-- Language Selector Pills [ EN | ID ] -->
+              <div class="flex items-center rounded-full bg-white/[0.06] p-0.5 ring-1 ring-white/10 text-[11px] font-semibold tracking-wide" role="group" aria-label="Language Selector">
+                <button type="button" data-action="set-lang" data-lang="en" class="px-2.5 py-1 rounded-full transition-all duration-200 cursor-pointer">EN</button>
+                <button type="button" data-action="set-lang" data-lang="id" class="px-2.5 py-1 rounded-full transition-all duration-200 cursor-pointer">ID</button>
+              </div>
+
+              <!-- Light / Dark Theme Toggle Button -->
+              <button type="button" data-action="toggle-theme" aria-label="Toggle light/dark theme" class="inline-flex items-center justify-center rounded-full w-[35px] h-[35px] text-white/80 hover:text-white transition-colors cursor-pointer">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72 1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+              </button>
+
+              <!-- Get App (secondary) -->
+              <a class="inline-flex items-center justify-center rounded-full text-body text-[13px] leading-[1.25] font-semibold whitespace-nowrap px-4 h-[35px] ring-1 ring-white/15 bg-white/[0.04] text-white/85 hover:bg-white/10 hover:text-white transition-all" href="#download" data-i18n="nav.get_app">
+                Get App
+              </a>
+
+              <!-- Sign In (primary) -->
+              <a class="gradient-brand-btn inline-flex items-center justify-center rounded-full text-body text-[13px] leading-[1.25] font-semibold whitespace-nowrap px-4 h-[35px]" href="#" data-i18n="nav.sign_in">
+                Sign In
+              </a>
+            </div>
+
+            <!-- Mobile Controls: Sign In + Theme + Menu -->
+            <div data-nav-mobile class="flex items-center gap-2">
+              <a class="gradient-brand-btn inline-flex items-center justify-center rounded-full text-body text-[13px] leading-[1.25] font-semibold whitespace-nowrap px-4 h-[35px]" href="#" data-i18n="nav.sign_in">
+                Sign In
+              </a>
+
+              <button type="button" data-action="toggle-theme" aria-label="Toggle light/dark theme" class="inline-flex items-center justify-center rounded-full w-[35px] h-[35px] text-white/80 hover:text-white transition-colors cursor-pointer">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72 1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+              </button>
+
+              <button type="button" data-action="toggle-menu" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-menu" class="inline-flex items-center justify-center rounded-full w-[35px] h-[35px] text-white/80 hover:text-white transition-colors cursor-pointer">
+                <svg data-menu-icon-open class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+                <svg data-menu-icon-close class="h-4 w-4 hidden" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+              </button>
+            </div>
+          </div>
+        </nav>
+
+        <!-- Mobile Menu Panel -->
+        <div id="mobile-menu" data-mobile-menu aria-hidden="true" class="absolute inset-x-0 top-full mt-2 rounded-3xl theme-glass-nav p-2.5 no-scrollbar">
+          <!-- Navigation List -->
+          <div class="flex flex-col">
+            <a href="#desktop-search" class="mobile-menu-item flex items-center rounded-full px-4 py-3 text-sm font-medium text-white/70 hover:text-white hover:bg-white/[0.06] transition-colors" data-i18n="nav.search">Desktop Search</a>
+            <a href="#features" class="mobile-menu-item flex items-center rounded-full px-4 py-3 text-sm font-medium text-white/70 hover:text-white hover:bg-white/[0.06] transition-colors" data-i18n="nav.features">Capabilities</a>
+            <a href="#architecture" class="mobile-menu-item flex items-center rounded-full px-4 py-3 text-sm font-medium text-white/70 hover:text-white hover:bg-white/[0.06] transition-colors" data-i18n="nav.arch">Architecture</a>
+            <a href="#security" class="mobile-menu-item flex items-center rounded-full px-4 py-3 text-sm font-medium text-white/70 hover:text-white hover:bg-white/[0.06] transition-colors" data-i18n="nav.security">Purview &amp; Security</a>
+            <a href="#faq" class="mobile-menu-item flex items-center rounded-full px-4 py-3 text-sm font-medium text-white/70 hover:text-white hover:bg-white/[0.06] transition-colors" data-i18n="nav.faq">Client FAQ</a>
+          </div>
+
+          <!-- Actions -->
+          <div class="mt-1 flex flex-col gap-1 border-t border-white/10 pt-2">
+            <a href="#" class="mobile-menu-item flex items-center gap-2 rounded-full px-4 py-3 text-sm font-medium text-white/85 hover:bg-white/[0.06] transition-colors">
+              <span data-i18n="nav.sign_in">Sign In</span>
+              <svg class="h-3.5 w-3.5 text-white/40" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
+            </a>
+            <a href="#download" data-menu-link class="mobile-menu-item flex items-center gap-2 rounded-full px-4 py-3 text-sm font-medium text-white/85 hover:bg-white/[0.06] transition-colors">
+              <span data-i18n="nav.get_app">Get App</span>
+              <svg class="h-3.5 w-3.5 text-white/40" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
+            </a>
+            <div class="mobile-menu-item flex items-center justify-between rounded-full px-4 py-3">
+              <span class="text-sm font-medium text-white/85" data-i18n="nav.language">Language</span>
+              <div class="flex items-center rounded-full bg-white/[0.06] p-0.5 ring-1 ring-white/10 text-[11px] font-semibold tracking-wide" role="group" aria-label="Language Selector">
+                <button type="button" data-action="set-lang" data-lang="en" class="px-3 py-1 rounded-full transition-all duration-200 cursor-pointer">EN</button>
+                <button type="button" data-action="set-lang" data-lang="id" class="px-3 py-1 rounded-full transition-all duration-200 cursor-pointer">ID</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- =========================================================================
+         HERO SECTION (WebGL2 Cloud Canvas, Waves, Orbits, Hero Pill)
+         ========================================================================= -->
+    <div class="relative isolate hero-gradient-mesh">
+      <!-- WebGL2 Cloud Canvas Background -->
+      <canvas data-cloud-canvas="night" aria-hidden="true" class="pointer-events-none block size-full absolute inset-0 -z-10 [mask-image:linear-gradient(to_bottom,black_70%,transparent)]"></canvas>
+
+      <section class="relative overflow-hidden pt-[130px] pb-[100px] md:pt-[170px] md:pb-[140px]">
+        <div class="sp-container relative flex flex-col items-center text-center">
+
+          <!-- Ecosystem Badge with subtle red gradient -->
+          <div class="mb-4 inline-flex items-center gap-2 rounded-full gradient-chip px-4 py-1 text-[12px] font-medium text-white/80 shadow-sm backdrop-blur-md">
+            <span class="h-2 w-2 rounded-full bg-[#dc2626] animate-pulse"></span>
+            <span data-i18n="hero.badge">The Desktop Knowledge Layer for Enterprise &amp; AI</span>
+          </div>
+
+          <!-- Headline -->
+          <div class="mx-auto max-w-full">
+            <h1 class="hero-title font-display font-normal text-white" data-i18n="hero.title">
+              The Enterprise Knowledge Layer for Local Data and AI Agents<span class="text-[#dc2626]">.</span>
+            </h1>
+          </div>
+
+          <!-- Subheadline -->
+          <div>
+            <p class="mt-[20px] max-w-[580px] text-body text-[16px] md:text-[17px] leading-[1.6] font-light text-white/70" data-i18n="hero.sub">
+              Search local storage, OneDrive, Outlook, and SharePoint instantly from your desktop. Feed your favorite LLMs clean, permission-aware company knowledge without leaking sensitive files.
+            </p>
+          </div>
+
+          <!-- Tech Stack / Ecosystem Trust Row -->
+          <div class="mt-[20px] flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[12px] font-light text-white/50">
+            <span class="flex items-center gap-1.5"><span class="h-1.5 w-1.5 rounded-full bg-emerald-400"></span><span data-i18n="hero.chip_opensearch">Sub-50ms OpenSearch</span></span>
+            <span class="flex items-center gap-1.5"><span class="h-1.5 w-1.5 rounded-full bg-blue-400"></span><span data-i18n="hero.chip_rust">Rust Parsing Worker</span></span>
+            <span class="flex items-center gap-1.5"><span class="h-1.5 w-1.5 rounded-full bg-amber-400"></span><span data-i18n="hero.chip_vault">HashiCorp Vault Secrets</span></span>
+            <span class="flex items-center gap-1.5"><span class="h-1.5 w-1.5 rounded-full bg-purple-400"></span><span data-i18n="hero.chip_entra">Microsoft Entra ID RBAC</span></span>
+          </div>
+
+          <!-- Animated Waves and Orbits Container -->
+          <div class="relative mt-[60px] w-full">
+            <div aria-hidden="true" class="pointer-events-none absolute inset-0">
+              <!-- Animated SVG Waves -->
+              <svg class="hero-waves-svg absolute top-[calc(50%-195.5px)] left-1/2 -translate-x-[1183px] opacity-80 md:-translate-x-[1285px]" width="1138.64" height="390" viewBox="0 0 1138.64 390" fill="none" overflow="visible" aria-hidden="true">
+                <defs>
+                  <linearGradient id="nx-wave" x1="0" y1="0" x2="1033" y2="0" gradientUnits="userSpaceOnUse">
+                    <stop stop-color="#fff" stop-opacity="0.52"></stop>
+                    <stop offset="0.92" stop-color="#fff" stop-opacity="0.52"></stop>
+                    <stop offset="1" stop-color="#dc2626" stop-opacity="0.3"></stop>
+                  </linearGradient>
+                  <linearGradient id="nx-wave-line" x1="1033" y1="0" x2="1138" y2="0" gradientUnits="userSpaceOnUse">
+                    <stop stop-color="#dc2626" stop-opacity="0.52"></stop>
+                    <stop offset="0.4" stop-color="#fff" stop-opacity="0.42"></stop>
+                    <stop offset="1" stop-color="#fff" stop-opacity="0"></stop>
+                  </linearGradient>
+                </defs>
+                <path d="M150 244L1033 195" pathLength="1" class="nx-wave-strand" stroke="url(#nx-wave)" stroke-width="1" stroke-opacity="0.85" fill="none"></path>
+                <path d="M150 115L1033 195" pathLength="1" class="nx-wave-strand" stroke="url(#nx-wave)" stroke-width="1" stroke-opacity="0.7" fill="none"></path>
+                <path d="M150 273L1033 195" pathLength="1" class="nx-wave-strand" stroke="url(#nx-wave)" stroke-width="1" stroke-opacity="0.6" fill="none"></path>
+                <path d="M150 112L1033 195" pathLength="1" class="nx-wave-strand" stroke="url(#nx-wave)" stroke-width="1" stroke-opacity="0.55" fill="none"></path>
+                <path d="M150 141L1033 195" pathLength="1" class="nx-wave-strand" stroke="url(#nx-wave)" stroke-width="1" stroke-opacity="0.45" fill="none"></path>
+                <path d="M150 147L1033 195" pathLength="1" class="nx-wave-strand" stroke="url(#nx-wave)" stroke-width="1" stroke-opacity="0.4" fill="none"></path>
+                <line class="nx-wave-run hidden md:block" x1="1033" y1="195.5" x2="1138" y2="195.5" pathLength="1" stroke="url(#nx-wave-line)" stroke-width="1"></line>
+              </svg>
+
+              <!-- Animated Concentric Orbits with Moving Dots -->
+              <svg class="nx-orbit-svg absolute top-[calc(50%-53.5px)] left-1/2 translate-x-[20px] md:translate-x-[145px]" width="1053.13" height="107.159" viewBox="0 0 1053.13 107.159" fill="none" overflow="visible" aria-hidden="true">
+                <defs>
+                  <linearGradient id="nx-orbit-outer" x1="129.445" y1="53.5796" x2="1053.13" y2="53.5796" gradientUnits="userSpaceOnUse">
+                    <stop stop-color="#fff" stop-opacity="0.4"></stop>
+                    <stop offset="1" stop-color="#dc2626" stop-opacity="0"></stop>
+                  </linearGradient>
+                  <linearGradient id="nx-orbit-inner" x1="129.445" y1="53.5796" x2="1053.13" y2="53.5796" gradientUnits="userSpaceOnUse">
+                    <stop stop-color="#fff" stop-opacity="0.45"></stop>
+                    <stop offset="1" stop-color="#dc2626" stop-opacity="0"></stop>
+                  </linearGradient>
+                </defs>
+                <line x1="0" y1="53.0791" x2="593.172" y2="53.0792" stroke="rgba(255,255,255,0.2)" class="nx-orbit-el"></line>
+                <path d="M591.288 0.5C718.809 0.5 834.25 6.49629 917.803 16.1895C959.582 21.0364 993.371 26.8059 1016.71 33.2061C1028.38 36.4072 1037.4 39.7592 1043.5 43.2168C1046.55 44.9457 1048.84 46.6874 1050.37 48.4307C1051.89 50.1707 1052.63 51.8865 1052.63 53.5801C1052.63 55.2735 1051.89 56.9886 1050.37 58.7285C1048.84 60.4717 1046.55 62.2135 1043.5 63.9424C1037.4 67.3999 1028.38 70.752 1016.71 73.9531C993.371 80.3533 959.582 86.1228 917.803 90.9697C834.25 100.663 718.809 106.659 591.288 106.659C463.767 106.659 348.326 100.663 264.773 90.9697C222.994 86.1228 189.205 80.3533 165.871 73.9531C154.2 70.752 145.174 67.3999 139.075 63.9424C136.026 62.2135 133.732 60.4717 132.206 58.7285C130.683 56.9886 129.945 55.2735 129.945 53.5801C129.945 51.8865 130.683 50.1707 132.206 48.4307C133.732 46.6874 136.026 44.9457 139.075 43.2168C145.174 39.7592 154.2 36.4072 165.871 33.2061C189.205 26.8059 222.994 21.0364 264.773 16.1895C348.326 6.49629 463.767 0.5 591.288 0.5Z" stroke="url(#nx-orbit-outer)" class="nx-orbit-el"></path>
+                <path d="M591.288 22.4072C718.815 22.4072 834.264 25.952 917.826 31.6826C959.61 34.548 993.409 37.9596 1016.76 41.7451C1028.43 43.6385 1037.48 45.6222 1043.59 47.6709C1046.65 48.6964 1048.95 49.7284 1050.47 50.7559C1052.01 51.7986 1052.63 52.7488 1052.63 53.5801C1052.63 54.4112 1052.01 55.3608 1050.47 56.4033C1048.95 57.4308 1046.65 58.4628 1043.59 59.4883C1037.48 61.537 1028.43 63.5207 1016.76 65.4141C993.409 69.1996 959.61 72.6111 917.826 75.4766C834.264 81.2071 718.815 84.752 591.288 84.752C463.761 84.752 348.312 81.2071 264.75 75.4766C222.967 72.6111 189.167 69.1996 165.819 65.4141C154.142 63.5207 145.1 61.537 138.987 59.4883C135.927 58.4628 133.631 57.4308 132.109 56.4033C130.566 55.3608 129.946 54.4112 129.945 53.5801C129.945 52.7488 130.565 51.7986 132.109 50.7559C133.631 49.7284 135.927 48.6964 138.987 47.6709C145.1 45.6222 154.142 43.6385 165.819 41.7451C189.167 37.9596 222.967 34.548 264.75 31.6826C348.312 25.952 463.761 22.4072 591.288 22.4072Z" stroke="url(#nx-orbit-inner)" class="nx-orbit-el"></path>
+
+                <!-- Hidden Guide Rails for Moving Dots -->
+                <path data-rail="0" d="M129.945 53.58 A461.34 53.08 0 0 1 1052.63 53.58" fill="none" stroke="none"></path>
+                <path data-rail="1" d="M129.945 53.58 A461.34 31.17 0 0 1 1052.63 53.58" fill="none" stroke="none"></path>
+                <path data-rail="2" d="M129.945 53.58 A461.34 31.17 0 0 0 1052.63 53.58" fill="none" stroke="none"></path>
+                <path data-rail="3" d="M129.945 53.58 A461.34 53.08 0 0 0 1052.63 53.58" fill="none" stroke="none"></path>
+                <path data-rail="4" d="M0 53.08 L593.172 53.08" fill="none" stroke="none"></path>
+
+                <!-- Traveling Dots -->
+                <circle class="nx-orbit-dot" r="2.4" fill="#ef4444"></circle>
+                <circle class="nx-orbit-dot" r="2.4" fill="#ffffff"></circle>
+                <circle class="nx-orbit-dot" r="2.4" fill="#dc2626"></circle>
+                <circle class="nx-orbit-dot" r="2.4" fill="#ffffff"></circle>
+                <circle class="nx-orbit-dot" r="2.4" fill="#f87171"></circle>
+              </svg>
+            </div>
+
+            <!-- CTA Buttons -->
+            <div class="relative flex flex-wrap items-center justify-center gap-[28px] pt-2">
+              <!-- Glowing Star Movement Button -->
+              <div class="relative inline-block overflow-hidden rounded-full p-[1px]">
+                <div class="absolute w-[300%] h-[50%] opacity-70 bottom-[-11px] right-[-250%] rounded-full animate-star-movement-bottom z-0" style="background:radial-gradient(circle, #dc2626, transparent 15%);"></div>
+                <div class="absolute w-[300%] h-[50%] opacity-70 top-[-10px] left-[-250%] rounded-full animate-star-movement-top z-0" style="background:radial-gradient(circle, #dc2626, transparent 15%);"></div>
+                <div class="relative z-10">
+                  <a class="gradient-brand-btn inline-flex items-center justify-center gap-2 rounded-full text-body leading-[1.25] font-semibold whitespace-nowrap h-[38px] px-6 text-[13px]" href="#download">
+                    <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 15V3m9 12v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4m4-5 5 5 5-5"/></svg>
+                    <span data-i18n="hero.cta_download">Get App</span>
+                  </a>
+                </div>
+              </div>
+
+              <!-- Outline Link -->
+              <a href="#desktop-search" class="inline-flex h-[38px] items-center justify-center rounded-full border border-white/20 px-6 text-body text-[13px] leading-[1.25] font-semibold text-white transition-colors hover:border-white/40 hover:bg-white/5" data-i18n="hero.cta_explore">
+                Explore Desktop Demo ↓
+              </a>
+            </div>
+
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- =========================================================================
+         PRODUCT DEMO: SEARCHPOINT DESKTOP APP
+         ========================================================================= -->
+    <section id="desktop-search" class="relative scroll-mt-[80px]">
+      <div class="sp-container">
+        <div class="sp-app" role="region" aria-label="SearchPoint desktop interface">
+          <!-- Window Title Bar -->
+          <div class="sp-frame-bar">
+            <div class="sp-dots"><i></i><i></i><i></i></div>
+            <span class="sp-title">SearchPoint</span>
+            <span class="sp-count">4 results · Indexed locally</span>
+          </div>
+
+          <!-- 3-Column Interface -->
+          <div class="sp-ui">
+            <!-- Column 1: Left Navigation Sidebar -->
+            <aside class="sp-side">
+              <div class="sp-sec-head">SOURCES <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 5v14m-7-7h14"/></svg></div>
+              <div class="sp-it"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg> All sources</div>
+              <div class="sp-it on"><span class="sp-dot" style="background:#dc2626"></span> On Device</div>
+              <div class="sp-it"><span class="sp-dot" style="background:#2563eb"></span> OneDrive</div>
+              <div class="sp-it"><span class="sp-dot" style="background:#059669"></span> SharePoint</div>
+              <div class="sp-add-source">+ Add source</div>
+
+              <div class="sp-sec-head">TYPE</div>
+              <div class="sp-it"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg> Document</div>
+              <div class="sp-it on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/></svg> PDF</div>
+              <div class="sp-it"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/></svg> Word</div>
+              <div class="sp-it"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg> Spreadsheets</div>
+              <div class="sp-it"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg> PPT</div>
+
+              <div class="sp-sec-head">CURATED</div>
+              <div class="sp-it"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> Favorites <span class="sp-count">6</span></div>
+
+              <div class="sp-sec-head">TAGS</div>
+              <div class="sp-it"><span class="sp-dot" style="background:#f472b6"></span> indorelawan <span class="sp-count">4</span></div>
+              <div class="sp-it"><span class="sp-dot" style="background:#38bdf8"></span> oneAI <span class="sp-count">1</span></div>
+            </aside>
+
+            <!-- Column 2: Search & Results -->
+            <div class="sp-main">
+              <div class="sp-searchbox">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+                <span class="sp-syntax">source:on_device kind:document type:pdf</span>
+                <span class="sp-exact"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg> Exact match</span>
+                <span class="sp-clear">✕</span>
+              </div>
+
+              <div class="sp-interpret">
+                <span>Interpreting as: <b>Extensions pdf · Source is On Device · Kind is Document</b></span>
+                <span class="sp-sort">Sort: Relevance ▾</span>
+              </div>
+
+              <div class="sp-filters">
+                <span class="sp-filter active">Type: pdf ✕</span>
+                <span class="sp-filter">Author: All</span>
+                <span class="sp-filter">Date: All</span>
+              </div>
+
+              <div class="sp-results">
+                <div class="sp-result selected">
+                  <div class="sp-file-icon">PDF</div>
+                  <div>
+                    <div class="sp-result-title">Indorelawan - Report - Laporan Tahunan Indorelawan 2020.pdf</div>
+                    <div class="sp-result-path">home / hj / Downloads</div>
+                    <div class="sp-tag-row">
+                      <span class="sp-source-chip"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/></svg> On Device</span>
+                    </div>
+                  </div>
+                  <div class="sp-result-meta">
+                    <div>12 MB</div>
+                    <div>Mon, 03 Aug</div>
+                  </div>
+                </div>
+
+                <div class="sp-result">
+                  <div class="sp-file-icon">PDF</div>
+                  <div>
+                    <div class="sp-result-title">Laporan Keuangan Indorelawan 2024_Audited.pdf</div>
+                    <div class="sp-result-path">home / hj / Downloads</div>
+                    <div class="sp-tag-row">
+                      <span class="sp-source-chip"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/></svg> On Device</span>
+                    </div>
+                  </div>
+                  <div class="sp-result-meta">
+                    <div>4.7 MB</div>
+                    <div>Fri, 31 Jul</div>
+                  </div>
+                </div>
+
+                <div class="sp-result">
+                  <div class="sp-file-icon">PDF</div>
+                  <div>
+                    <div class="sp-result-title">Laporan Tahunan Indorelawan 2025.pdf</div>
+                    <div class="sp-result-path">home / hj / Downloads</div>
+                    <div class="sp-tag-row">
+                      <span class="sp-source-chip"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/></svg> On Device</span>
+                    </div>
+                  </div>
+                  <div class="sp-result-meta">
+                    <div>63 MB</div>
+                    <div>Fri, 31 Jul</div>
+                  </div>
+                </div>
+
+                <div class="sp-result">
+                  <div class="sp-file-icon">PDF</div>
+                  <div>
+                    <div class="sp-result-title">Presentasi Neuralwatt.pdf</div>
+                    <div class="sp-result-path">home / hj / Downloads</div>
+                    <div class="sp-tag-row">
+                      <span class="sp-source-chip"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/></svg> On Device</span>
+                      <span class="sp-source-chip" style="background:#fce7f3;color:#be185d;border:none">indorelawan</span>
+                    </div>
+                  </div>
+                  <div class="sp-result-meta">
+                    <div>2.5 MB</div>
+                    <div>Fri, 03 Jul</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Column 3: Detail Panel & AI Recommendations -->
+            <aside class="sp-detail">
+              <div class="sp-detail-top">
+                <div class="sp-file-icon">PDF</div>
+                <div>
+                  <div class="sp-detail-title">Indorelawan - Report - Laporan Tahunan Indorelawan 2020.pdf</div>
+                  <div class="sp-detail-path">home / hj / Downloads</div>
+                </div>
+              </div>
+
+              <div class="sp-actions">
+                <button type="button" class="sp-btn-red">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"/></svg>
+                  Open File
+                </button>
+                <button type="button" class="sp-btn-gray">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+                  Open Folder
+                </button>
+              </div>
+
+              <div class="sp-rename">
+                <div class="sp-rename-head">
+                  <span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+                    FILENAME RECOMMENDATIONS
+                  </span>
+                </div>
+                <div class="sp-rename-item">
+                  <span class="sp-name">Report - Indorelawan - 2020 - Laporan Tahunan Indorelawan 2020.pdf</span>
+                  <span class="sp-check">✓</span>
+                </div>
+                <div class="sp-rename-item">
+                  <span class="sp-name">Report - Indorelawan - Laporan Tahunan Indorelawan 2020.pdf</span>
+                  <span class="sp-check">✓</span>
+                </div>
+                <div class="sp-rename-note">
+                  Rule: Category / Type First<br />
+                  The on-device model reads document contents and automatically suggests standard, clutter-free naming conventions.
+                </div>
+              </div>
+
+              <dl class="sp-meta">
+                <dt>Size</dt><dd>12 MB</dd>
+                <dt>Type</dt><dd>pdf</dd>
+                <dt>Pages</dt><dd>55</dd>
+                <dt>Author</dt><dd>sinta@hyperjump.tech</dd>
+                <dt>Created</dt><dd>Mon, 03 Aug 2026</dd>
+              </dl>
+            </aside>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================================
+         INTEGRATION ATLAS / CONNECTORS (Interactive orbits + trust planes)
+         ========================================================================= -->
+    <section id="connectors" class="connector-glow connector-section relative overflow-hidden border-t border-white/5">
+      <div class="sp-container text-center">
+        <p class="text-[12px] font-medium tracking-[0.2em] text-[#dc2626] uppercase mb-3" data-i18n="connectors.tag">Enterprise Connectors</p>
+        <h2 class="section-title font-display font-light text-white" data-i18n="connectors.title">Searches what you already have. Without migration.</h2>
+        <p class="mt-3 text-sm text-white/55 max-w-xl mx-auto font-light" data-i18n="connectors.desc">
+          No secondary file uploads. SearchPoint connects through standard OAuth/OIDC with admin consent, keeping your native DLP and ACLs fully intact at the source.
+        </p>
+
+        <!-- Category filters -->
+        <div class="cl-toolbar" role="group" aria-label="Connector categories">
+          <button type="button" class="cl-filter is-active" data-filter="all" aria-pressed="true"><span class="cl-filter-dot"></span><span data-i18n="connectors.all">All sources</span></button>
+          <button type="button" class="cl-filter" data-filter="ms" aria-pressed="false"><span class="cl-filter-dot"></span><span data-i18n="connectors.ms365">Microsoft 365</span></button>
+          <button type="button" class="cl-filter" data-filter="identity" aria-pressed="false"><span class="cl-filter-dot"></span><span data-i18n="connectors.identity">Identity &amp; RBAC</span></button>
+          <button type="button" class="cl-filter" data-filter="secrets" aria-pressed="false"><span class="cl-filter-dot"></span><span data-i18n="connectors.secrets_filter">Secrets</span></button>
+          <button type="button" class="cl-filter" data-filter="device" aria-pressed="false"><span class="cl-filter-dot"></span><span data-i18n="connectors.device">On-device</span></button>
+          <button type="button" class="cl-filter" data-filter="messaging" aria-pressed="false"><span class="cl-filter-dot"></span><span data-i18n="connectors.messaging">Messaging</span></button>
+          <button type="button" class="cl-filter" data-filter="workspace" aria-pressed="false"><span class="cl-filter-dot"></span><span data-i18n="connectors.workspace">Workspace</span></button>
+        </div>
+
+        <div class="cl-atlas">
+          <!-- Orbit stage -->
+          <div class="cl-stage" id="clStage">
+            <svg class="cl-links" id="clLinks" aria-hidden="true"></svg>
+            <span class="cl-ring cl-ring--outer" aria-hidden="true"></span>
+            <span class="cl-ring cl-ring--mid" aria-hidden="true"></span>
+            <span class="cl-ring cl-ring--inner" aria-hidden="true"></span>
+
+            <div class="cl-core-wrap" aria-hidden="true">
+              <span class="cl-core-pulse"></span>
+              <span class="cl-core-pulse"></span>
+              <span class="cl-core-halo"></span>
+              <div class="cl-core">
+                <span class="cl-core-line1">SEARCH</span>
+                <span class="cl-core-line2">POINT</span>
+                <span class="cl-core-tag">ATLAS</span>
+              </div>
+            </div>
+
+            <!-- Inner ring -->
+            <button type="button" class="cl-node" data-key="onedrive" data-cat="ms" data-ring="inner" data-angle="-90" data-name="OneDrive" title="OneDrive" style="--accent:#60a5fa;--d:0ms">
+              <span class="cl-node-orb"><span class="cl-node-halo"></span><span class="cl-node-icon"><svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg></span></span>
+              <span class="cl-node-text"><span class="cl-node-name">OneDrive</span><span class="cl-node-cat" data-i18n="connectors.ms365">Microsoft 365</span></span>
+            </button>
+            <button type="button" class="cl-node" data-key="outlook" data-cat="ms" data-ring="inner" data-angle="-30" data-name="Outlook" title="Outlook" style="--accent:#38bdf8;--d:400ms">
+              <span class="cl-node-orb"><span class="cl-node-halo"></span><span class="cl-node-icon"><svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg></span></span>
+              <span class="cl-node-text"><span class="cl-node-name">Outlook</span><span class="cl-node-cat" data-i18n="connectors.ms365">Microsoft 365</span></span>
+            </button>
+            <button type="button" class="cl-node" data-key="teams" data-cat="ms" data-ring="inner" data-angle="30" data-name="Microsoft Teams" title="Microsoft Teams" style="--accent:#a78bfa;--d:800ms">
+              <span class="cl-node-orb"><span class="cl-node-halo"></span><span class="cl-node-icon"><svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span></span>
+              <span class="cl-node-text"><span class="cl-node-name">Teams</span><span class="cl-node-cat" data-i18n="connectors.ms365">Microsoft 365</span></span>
+            </button>
+            <button type="button" class="cl-node" data-key="onenote" data-cat="ms" data-ring="inner" data-angle="90" data-name="OneNote" title="OneNote" style="--accent:#c084fc;--d:1200ms">
+              <span class="cl-node-orb"><span class="cl-node-halo"></span><span class="cl-node-icon"><svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M2 6h4v12H2z"/><path d="M6 4h13a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6"/><path d="M10 9h6M10 13h6"/></svg></span></span>
+              <span class="cl-node-text"><span class="cl-node-name">OneNote</span><span class="cl-node-cat" data-i18n="connectors.ms365">Microsoft 365</span></span>
+            </button>
+            <button type="button" class="cl-node" data-key="sticky" data-cat="device" data-ring="inner" data-angle="150" data-name="Sticky Notes" title="Sticky Notes" style="--accent:#fbbf24;--d:1600ms">
+              <span class="cl-node-orb"><span class="cl-node-halo"></span><span class="cl-node-icon"><svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M15 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h9l7-7V5a2 2 0 0 0-2-2Z"/><path d="M14 21v-5a2 2 0 0 1 2-2h5"/></svg></span></span>
+              <span class="cl-node-text"><span class="cl-node-name">Sticky Notes</span><span class="cl-node-cat" data-i18n="connectors.device">On-device</span></span>
+            </button>
+            <button type="button" class="cl-node" data-key="whatsapp" data-cat="messaging" data-ring="inner" data-angle="210" data-name="WhatsApp" title="WhatsApp" style="--accent:#4ade80;--d:2000ms">
+              <span class="cl-node-orb"><span class="cl-node-halo"></span><span class="cl-node-icon"><svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/><path d="M8.5 9.5c0 3 2 5 5 5l1.5-1.5 2 1.2c-.5 2.3-3 3.3-5.5 2.3-2.5-1-4.5-3-5.5-5.5-1-2.5 0-5 2.3-5.5l1.2 2L8.5 9.5Z"/></svg></span></span>
+              <span class="cl-node-text"><span class="cl-node-name">WhatsApp</span><span class="cl-node-cat" data-i18n="connectors.messaging">Messaging</span></span>
+            </button>
+
+            <!-- Outer ring -->
+            <button type="button" class="cl-node" data-key="entra" data-cat="identity" data-ring="outer" data-angle="-60" data-name="Entra ID" title="Microsoft Entra ID — Identity plane" style="--accent:#8b5cf6;--d:200ms">
+              <span class="cl-node-orb"><span class="cl-node-halo"></span><span class="cl-node-icon"><svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg></span></span>
+              <span class="cl-node-text"><span class="cl-node-name">Entra ID</span><span class="cl-node-cat" data-i18n="connectors.identity">Identity &amp; RBAC</span></span>
+            </button>
+            <button type="button" class="cl-node" data-key="sharepoint" data-cat="ms" data-ring="outer" data-angle="0" data-name="SharePoint" title="SharePoint" style="--accent:#34d399;--d:600ms">
+              <span class="cl-node-orb"><span class="cl-node-halo"></span><span class="cl-node-icon"><svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="m12 2 9 5-9 5-9-5 9-5Z"/><path d="m3 12 9 5 9-5"/><path d="m3 17 9 5 9-5"/></svg></span></span>
+              <span class="cl-node-text"><span class="cl-node-name">SharePoint</span><span class="cl-node-cat" data-i18n="connectors.ms365">Microsoft 365</span></span>
+            </button>
+            <button type="button" class="cl-node" data-key="gmail" data-cat="workspace" data-ring="outer" data-angle="60" data-name="Gmail" title="Gmail — roadmap" style="--accent:#f87171;--d:1000ms">
+              <span class="cl-node-orb"><span class="cl-node-halo"></span><span class="cl-node-icon"><svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m3 6 9 7 9-7"/></svg></span></span>
+              <span class="cl-node-soon" data-i18n="connectors.soon">Soon</span>
+              <span class="cl-node-text"><span class="cl-node-name">Gmail</span><span class="cl-node-cat" data-i18n="connectors.workspace">Google Workspace</span></span>
+            </button>
+            <button type="button" class="cl-node" data-key="gdrive" data-cat="workspace" data-ring="outer" data-angle="120" data-name="Google Drive" title="Google Drive — roadmap" style="--accent:#fbbf24;--d:1400ms">
+              <span class="cl-node-orb"><span class="cl-node-halo"></span><span class="cl-node-icon"><svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="m8 3 8 0 6 10-4 8H6L2 13Z"/><path d="M8 3 12 11h8"/><path d="M2 13h20"/></svg></span></span>
+              <span class="cl-node-soon" data-i18n="connectors.soon">Soon</span>
+              <span class="cl-node-text"><span class="cl-node-name">Google Drive</span><span class="cl-node-cat" data-i18n="connectors.workspace">Google Workspace</span></span>
+            </button>
+            <button type="button" class="cl-node" data-key="vault" data-cat="secrets" data-ring="outer" data-angle="180" data-name="HashiCorp Vault" title="HashiCorp Vault — Secrets plane" style="--accent:#f59e0b;--d:1800ms">
+              <span class="cl-node-orb"><span class="cl-node-halo"></span><span class="cl-node-icon"><svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span></span>
+              <span class="cl-node-text"><span class="cl-node-name">HashiCorp Vault</span><span class="cl-node-cat" data-i18n="connectors.secrets_filter">Secrets</span></span>
+            </button>
+            <button type="button" class="cl-node" data-key="local" data-cat="device" data-ring="outer" data-angle="240" data-name="Local Disk" title="Local Disk" style="--accent:#22d3ee;--d:2200ms">
+              <span class="cl-node-orb"><span class="cl-node-halo"></span><span class="cl-node-icon"><svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M6 9h.01M10 9h.01M6 13h8"/></svg></span></span>
+              <span class="cl-node-text"><span class="cl-node-name">Local Disk</span><span class="cl-node-cat" data-i18n="connectors.device">On-device</span></span>
+            </button>
+          </div>
+
+          <!-- Detail panel -->
+          <aside class="cl-panel" id="clPanel" aria-live="polite" aria-atomic="true" style="--accent:#8b5cf6">
+            <div class="cl-panel-body">
+              <div class="cl-panel-top">
+                <span class="cl-panel-icon" id="clPanelIcon"><svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg></span>
+                <div class="cl-panel-heading">
+                  <span class="cl-panel-kicker" id="clPanelKicker">Identity plane</span>
+                  <h3 class="cl-panel-title" id="clPanelTitle">Entra ID</h3>
+                  <span class="cl-panel-cat" id="clPanelCat">Identity &amp; RBAC</span>
+                </div>
+              </div>
+              <p class="cl-panel-desc" id="clPanelDesc">Entra ID answers who is asking. Native OIDC/OAuth claims decide which documents may appear for this user — on every query, fail-closed.</p>
+              <dl class="cl-specs" id="clPanelSpecs">
+                <div class="cl-spec"><dt>Auth</dt><dd>OAuth 2.0 / OIDC SSO</dd></div>
+                <div class="cl-spec"><dt>ACL</dt><dd>Groups, ACL &amp; Purview claims</dd></div>
+                <div class="cl-spec"><dt>Mode</dt><dd>Query-time, fail-closed</dd></div>
+              </dl>
+              <div class="cl-panel-foot">
+                <span class="cl-status" id="clPanelStatus"><i></i><span>Connected</span></span>
+                <span class="cl-panel-hint" data-i18n="connectors.panel_hint">Click another node to inspect its trust boundary.</span>
+              </div>
+            </div>
+          </aside>
+        </div>
+
+        <!-- The two trust planes: identity vs secrets -->
+        <div class="cl-pair">
+          <article class="cl-plane cl-plane--identity">
+            <div class="cl-plane-head">
+              <span class="cl-plane-icon"><svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><circle cx="12" cy="10" r="2.4"/><path d="M8.2 16.2a4.2 4.2 0 0 1 7.6 0"/></svg></span>
+              <span class="cl-plane-badge" data-i18n="connectors.identity_badge">Identity plane</span>
+            </div>
+            <h3 class="cl-plane-title" data-i18n="connectors.identity_title">Microsoft Entra ID</h3>
+            <p class="cl-plane-desc" data-i18n="connectors.identity_desc">Who is asking? OAuth/OIDC claims, Microsoft 365 groups, and Purview labels decide which documents may surface — on every query.</p>
+            <ul class="cl-plane-list">
+              <li><span class="cl-plane-tick"><svg fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24"><path d="m5 12 5 5L20 7"/></svg></span><span data-i18n="connectors.identity_p1">SSO with OAuth 2.0 / OIDC</span></li>
+              <li><span class="cl-plane-tick"><svg fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24"><path d="m5 12 5 5L20 7"/></svg></span><span data-i18n="connectors.identity_p2">Group, ACL &amp; Purview claims</span></li>
+              <li><span class="cl-plane-tick"><svg fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24"><path d="m5 12 5 5L20 7"/></svg></span><span data-i18n="connectors.identity_p3">Fail-closed filtering at query time</span></li>
+            </ul>
+            <p class="cl-plane-note" data-i18n="connectors.identity_note">Answers: who is allowed to see this result?</p>
+          </article>
+
+          <article class="cl-plane cl-plane--secrets">
+            <div class="cl-plane-head">
+              <span class="cl-plane-icon"><svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/><path d="M12 15v3"/></svg></span>
+              <span class="cl-plane-badge" data-i18n="connectors.secrets_badge">Secrets plane</span>
+            </div>
+            <h3 class="cl-plane-title" data-i18n="connectors.secrets_title">HashiCorp Vault</h3>
+            <p class="cl-plane-desc" data-i18n="connectors.secrets_desc">How are credentials and keys protected? Dynamic secrets, transit encryption, and KMS auto-unseal keep connector tokens out of config files and rotate them automatically.</p>
+            <ul class="cl-plane-list">
+              <li><span class="cl-plane-tick"><svg fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24"><path d="m5 12 5 5L20 7"/></svg></span><span data-i18n="connectors.secrets_p1">Dynamic, short-lived credentials</span></li>
+              <li><span class="cl-plane-tick"><svg fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24"><path d="m5 12 5 5L20 7"/></svg></span><span data-i18n="connectors.secrets_p2">Transit encryption &amp; audit trail</span></li>
+              <li><span class="cl-plane-tick"><svg fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24"><path d="m5 12 5 5L20 7"/></svg></span><span data-i18n="connectors.secrets_p3">KMS auto-unseal (AWS / Azure / GCP)</span></li>
+            </ul>
+            <p class="cl-plane-note" data-i18n="connectors.secrets_note">Answers: how is this secret protected and rotated?</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================================
+         CAPABILITIES CAROUSEL (#features - Replicating Nalar Meet the Agents)
+         ========================================================================= -->
+    <section id="features" class="scroll-mt-[80px]">
+      <div class="sp-container">
+        <div class="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+          <div>
+            <p class="text-[12px] font-medium tracking-[0.2em] text-[#dc2626] uppercase mb-2" data-i18n="features.tag">Core Differentiators</p>
+            <h2 class="section-title max-w-[620px] font-display font-light text-white" data-i18n="features.title">
+              Built for enterprises that cannot afford document leaks<span class="text-[#dc2626]">.</span>
+            </h2>
+          </div>
+          <div class="hidden shrink-0 gap-2 md:flex">
+            <button type="button" aria-label="Previous card" class="flex size-11 items-center justify-center rounded-full border border-white/15 text-white/70 transition-colors hover:border-white/40 hover:text-white">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 19-7-7 7-7"></path><path d="M19 12H5"></path></svg>
+            </button>
+            <button type="button" aria-label="Next card" class="flex size-11 items-center justify-center rounded-full border border-white/15 text-white/70 transition-colors hover:border-white/40 hover:text-white">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Agent-style capability carousel -->
+      <div class="relative mt-[54px]">
+        <div aria-hidden="true" class="agent-fade-left pointer-events-none absolute inset-y-0 left-0 z-10 hidden md:block"></div>
+        <div aria-hidden="true" class="agent-fade-right pointer-events-none absolute inset-y-0 right-0 z-10 hidden w-[220px] md:block"></div>
+        <div class="flex snap-x snap-mandatory items-start gap-[20px] overflow-x-auto scroll-pl-6 px-6 pb-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:scroll-pl-[max(24px,calc((100vw-1152px)/2))] md:px-[max(24px,calc((100vw-1152px)/2))]">
+
+          <!-- Card 1: Zero Document Retention -->
+          <article data-card class="agent-card flex w-[78vw] max-w-[400px] shrink-0 snap-start flex-col rounded-field p-[26px] transition-colors duration-300">
+            <div class="agent-hero relative overflow-hidden -mx-[26px] -mt-[26px] rounded-t-field px-[26px] pt-[24px] pb-[20px]">
+              <div class="absolute inset-0 opacity-30">
+                <div aria-hidden="true" class="absolute inset-0 overflow-hidden rounded-[inherit]">
+                  <div class="absolute inset-0" style="background-image:linear-gradient(155deg, #171717 0%, #0f0f0f 100%)"></div>
+                  <div class="absolute" style="left:0%;top:-25%;width:198%;height:237%;background:radial-gradient(closest-side, rgba(220,38,38,0.3) 45%, rgba(220,38,38,0.13) 75%, rgba(220,38,38,0) 100%);border-radius:63% 37% 54% 46% / 55% 48% 52% 45%;filter:blur(36px)"></div>
+                  <div class="absolute inset-0" style="background:linear-gradient(180deg, rgba(10,10,10,0.12) 0%, rgba(10,10,10,0.4) 100%)"></div>
+                  <div class="agent-noise absolute inset-0"></div>
+                  <div class="agent-noise agent-noise-soft absolute inset-0"></div>
+                </div>
+              </div>
+              <div class="relative flex items-center gap-4 pt-2">
+                <span aria-hidden="true" class="relative size-10 shrink-0 overflow-hidden rounded-full ring-1 ring-white/20" style="background:hsl(0 60% 16%)">
+                  <span class="absolute size-7 -left-1 -top-1 motion-safe:animate-[orbit_7s_linear_infinite]" style="transform-origin:65% 65%"><span class="block size-full rounded-full blur-[6px]" style="background:hsl(0 90% 62%);opacity:0.9"></span></span>
+                  <span class="absolute size-7 -right-1 top-2 motion-safe:animate-[counter-orbit_5s_linear_infinite]" style="transform-origin:65% 65%"><span class="block size-full rounded-full blur-[6px]" style="background:hsl(35 90% 62%);opacity:0.9"></span></span>
+                  <span class="absolute size-7 left-1 -bottom-2 motion-safe:animate-[orbit_9s_linear_infinite]" style="transform-origin:65% 65%"><span class="block size-full rounded-full blur-[6px]" style="background:hsl(320 90% 62%);opacity:0.9"></span></span>
+                  <span class="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_35%_25%,rgba(255,255,255,0.45),transparent_55%)]"></span>
+                </span>
+                <div>
+                  <h3 class="text-title leading-tight font-medium text-white" data-i18n="c1.title">Zero Document Retention</h3>
+                  <p class="mt-1 text-caption text-white/45" data-i18n="c1.tag">Data Privacy</p>
+                </div>
+              </div>
+              <p class="relative mt-5 max-w-[340px] text-body leading-[1.55] font-light text-white/70" data-i18n="c1.desc">
+                We do not store your files. SearchPoint indexes metadata, keywords, and text summaries in OpenSearch. Raw binaries are parsed in isolated, ephemeral sandboxes and immediately purged.
+              </p>
+            </div>
+            <ul class="mt-3 border-b border-white/10">
+              <li class="border-t border-white/10 first:border-t-0">
+                <button type="button" aria-expanded="false" class="group/row flex w-full items-baseline gap-[10px] py-[12px] text-left">
+                  <svg viewBox="0 0 12 12" aria-hidden="true" class="h-[9px] w-[9px] shrink-0 translate-y-[1px] text-white/35 transition-colors group-hover/row:text-white/70" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M6 1.5v9M1.5 6h9"></path></svg>
+                  <span class="text-[13.5px] leading-[1.5] font-light transition-colors duration-200 text-white/70 group-hover/row:text-white" data-i18n="c1.b1">Direct-to-Source</span>
+                </button>
+              </li>
+              <li class="border-t border-white/10 first:border-t-0">
+                <button type="button" aria-expanded="false" class="group/row flex w-full items-baseline gap-[10px] py-[12px] text-left">
+                  <svg viewBox="0 0 12 12" aria-hidden="true" class="h-[9px] w-[9px] shrink-0 translate-y-[1px] text-white/35 transition-colors group-hover/row:text-white/70" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M6 1.5v9M1.5 6h9"></path></svg>
+                  <span class="text-[13.5px] leading-[1.5] font-light transition-colors duration-200 text-white/70 group-hover/row:text-white" data-i18n="c1.b2">100% Ephemeral</span>
+                </button>
+              </li>
+            </ul>
+          </article>
+
+          <!-- Card 2: Query-Time Purview & RBAC -->
+          <article data-card class="agent-card flex w-[78vw] max-w-[400px] shrink-0 snap-start flex-col rounded-field p-[26px] transition-colors duration-300">
+            <div class="agent-hero relative overflow-hidden -mx-[26px] -mt-[26px] rounded-t-field px-[26px] pt-[24px] pb-[20px]">
+              <div class="absolute inset-0 opacity-30">
+                <div aria-hidden="true" class="absolute inset-0 overflow-hidden rounded-[inherit]">
+                  <div class="absolute inset-0" style="background-image:linear-gradient(155deg, #171717 0%, #0f0f0f 100%)"></div>
+                  <div class="absolute" style="left:2%;top:-35%;width:204%;height:247%;background:radial-gradient(closest-side, rgba(59,130,246,0.3) 45%, rgba(59,130,246,0.13) 75%, rgba(59,130,246,0) 100%);border-radius:41% 59% 48% 52% / 63% 37% 63% 37%;filter:blur(36px)"></div>
+                  <div class="absolute inset-0" style="background:linear-gradient(180deg, rgba(10,10,10,0.12) 0%, rgba(10,10,10,0.4) 100%)"></div>
+                  <div class="agent-noise absolute inset-0"></div>
+                  <div class="agent-noise agent-noise-soft absolute inset-0"></div>
+                </div>
+              </div>
+              <div class="relative flex items-center gap-4 pt-2">
+                <span aria-hidden="true" class="relative size-10 shrink-0 overflow-hidden rounded-full ring-1 ring-white/20" style="background:hsl(217 60% 16%)">
+                  <span class="absolute size-7 -left-1 -top-1 motion-safe:animate-[orbit_7s_linear_infinite]" style="transform-origin:65% 65%"><span class="block size-full rounded-full blur-[6px]" style="background:hsl(217 90% 62%);opacity:0.9"></span></span>
+                  <span class="absolute size-7 -right-1 top-2 motion-safe:animate-[counter-orbit_5s_linear_infinite]" style="transform-origin:65% 65%"><span class="block size-full rounded-full blur-[6px]" style="background:hsl(252 90% 62%);opacity:0.9"></span></span>
+                  <span class="absolute size-7 left-1 -bottom-2 motion-safe:animate-[orbit_9s_linear_infinite]" style="transform-origin:65% 65%"><span class="block size-full rounded-full blur-[6px]" style="background:hsl(182 90% 62%);opacity:0.9"></span></span>
+                  <span class="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_35%_25%,rgba(255,255,255,0.45),transparent_55%)]"></span>
+                </span>
+                <div>
+                  <h3 class="text-title leading-tight font-medium text-white" data-i18n="c2.title">Query-Time Purview &amp; RBAC</h3>
+                  <p class="mt-1 text-caption text-white/45" data-i18n="c2.tag">Access Control</p>
+                </div>
+              </div>
+              <p class="relative mt-5 max-w-[340px] text-body leading-[1.55] font-light text-white/70" data-i18n="c2.desc">
+                The #1 enterprise fear with AI search (oversharing) is architecturally prevented. Every query filters results per user. If someone can't open a file in OneDrive, they cannot see or query it.
+              </p>
+            </div>
+            <ul class="mt-3 border-b border-white/10">
+              <li class="border-t border-white/10 first:border-t-0">
+                <button type="button" aria-expanded="false" class="group/row flex w-full items-baseline gap-[10px] py-[12px] text-left">
+                  <svg viewBox="0 0 12 12" aria-hidden="true" class="h-[9px] w-[9px] shrink-0 translate-y-[1px] text-white/35 transition-colors group-hover/row:text-white/70" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M6 1.5v9M1.5 6h9"></path></svg>
+                  <span class="text-[13.5px] leading-[1.5] font-light transition-colors duration-200 text-white/70 group-hover/row:text-white" data-i18n="c2.b1">Fail-Closed</span>
+                </button>
+              </li>
+              <li class="border-t border-white/10 first:border-t-0">
+                <button type="button" aria-expanded="false" class="group/row flex w-full items-baseline gap-[10px] py-[12px] text-left">
+                  <svg viewBox="0 0 12 12" aria-hidden="true" class="h-[9px] w-[9px] shrink-0 translate-y-[1px] text-white/35 transition-colors group-hover/row:text-white/70" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M6 1.5v9M1.5 6h9"></path></svg>
+                  <span class="text-[13.5px] leading-[1.5] font-light transition-colors duration-200 text-white/70 group-hover/row:text-white" data-i18n="c2.b2">Entra ID Native</span>
+                </button>
+              </li>
+            </ul>
+          </article>
+
+          <!-- Card 3: Sub-50ms Desktop Speed -->
+          <article data-card class="agent-card flex w-[78vw] max-w-[400px] shrink-0 snap-start flex-col rounded-field p-[26px] transition-colors duration-300">
+            <div class="agent-hero relative overflow-hidden -mx-[26px] -mt-[26px] rounded-t-field px-[26px] pt-[24px] pb-[20px]">
+              <div class="absolute inset-0 opacity-30">
+                <div aria-hidden="true" class="absolute inset-0 overflow-hidden rounded-[inherit]">
+                  <div class="absolute inset-0" style="background-image:linear-gradient(155deg, #171717 0%, #0f0f0f 100%)"></div>
+                  <div class="absolute" style="left:1%;top:-30%;width:202%;height:244%;background:radial-gradient(closest-side, rgba(16,185,129,0.3) 45%, rgba(16,185,129,0.13) 75%, rgba(16,185,129,0) 100%);border-radius:57% 43% 36% 64% / 44% 59% 41% 56%;filter:blur(36px)"></div>
+                  <div class="absolute inset-0" style="background:linear-gradient(180deg, rgba(10,10,10,0.12) 0%, rgba(10,10,10,0.4) 100%)"></div>
+                  <div class="agent-noise absolute inset-0"></div>
+                  <div class="agent-noise agent-noise-soft absolute inset-0"></div>
+                </div>
+              </div>
+              <div class="relative flex items-center gap-4 pt-2">
+                <span aria-hidden="true" class="relative size-10 shrink-0 overflow-hidden rounded-full ring-1 ring-white/20" style="background:hsl(160 60% 16%)">
+                  <span class="absolute size-7 -left-1 -top-1 motion-safe:animate-[orbit_7s_linear_infinite]" style="transform-origin:65% 65%"><span class="block size-full rounded-full blur-[6px]" style="background:hsl(160 90% 62%);opacity:0.9"></span></span>
+                  <span class="absolute size-7 -right-1 top-2 motion-safe:animate-[counter-orbit_5s_linear_infinite]" style="transform-origin:65% 65%"><span class="block size-full rounded-full blur-[6px]" style="background:hsl(195 90% 62%);opacity:0.9"></span></span>
+                  <span class="absolute size-7 left-1 -bottom-2 motion-safe:animate-[orbit_9s_linear_infinite]" style="transform-origin:65% 65%"><span class="block size-full rounded-full blur-[6px]" style="background:hsl(125 90% 62%);opacity:0.9"></span></span>
+                  <span class="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_35%_25%,rgba(255,255,255,0.45),transparent_55%)]"></span>
+                </span>
+                <div>
+                  <h3 class="text-title leading-tight font-medium text-white" data-i18n="c3.title">Sub-50ms Desktop Speed</h3>
+                  <p class="mt-1 text-caption text-white/45" data-i18n="c3.tag">Search Performance</p>
+                </div>
+              </div>
+              <p class="relative mt-5 max-w-[340px] text-body leading-[1.55] font-light text-white/70" data-i18n="c3.desc">
+                Press Ctrl + Space from any active application. Features boolean operators (AND/OR/NOT), fuzzy matching, multilingual stemming (English + Indonesian), and field boosting.
+              </p>
+            </div>
+            <ul class="mt-3 border-b border-white/10">
+              <li class="border-t border-white/10 first:border-t-0">
+                <button type="button" aria-expanded="false" class="group/row flex w-full items-baseline gap-[10px] py-[12px] text-left">
+                  <svg viewBox="0 0 12 12" aria-hidden="true" class="h-[9px] w-[9px] shrink-0 translate-y-[1px] text-white/35 transition-colors group-hover/row:text-white/70" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M6 1.5v9M1.5 6h9"></path></svg>
+                  <span class="text-[13.5px] leading-[1.5] font-light transition-colors duration-200 text-white/70 group-hover/row:text-white" data-i18n="c3.b1">OpenSearch Core</span>
+                </button>
+              </li>
+              <li class="border-t border-white/10 first:border-t-0">
+                <button type="button" aria-expanded="false" class="group/row flex w-full items-baseline gap-[10px] py-[12px] text-left">
+                  <svg viewBox="0 0 12 12" aria-hidden="true" class="h-[9px] w-[9px] shrink-0 translate-y-[1px] text-white/35 transition-colors group-hover/row:text-white/70" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M6 1.5v9M1.5 6h9"></path></svg>
+                  <span class="text-[13.5px] leading-[1.5] font-light transition-colors duration-200 text-white/70 group-hover/row:text-white" data-i18n="c3.b2">Instant Launch</span>
+                </button>
+              </li>
+            </ul>
+          </article>
+
+          <!-- Card 4: Intelligent On-Device Rename -->
+          <article data-card class="agent-card flex w-[78vw] max-w-[400px] shrink-0 snap-start flex-col rounded-field p-[26px] transition-colors duration-300">
+            <div class="agent-hero relative overflow-hidden -mx-[26px] -mt-[26px] rounded-t-field px-[26px] pt-[24px] pb-[20px]">
+              <div class="absolute inset-0 opacity-30">
+                <div aria-hidden="true" class="absolute inset-0 overflow-hidden rounded-[inherit]">
+                  <div class="absolute inset-0" style="background-image:linear-gradient(155deg, #171717 0%, #0f0f0f 100%)"></div>
+                  <div class="absolute" style="left:-2%;top:-45%;width:204%;height:252%;background:radial-gradient(closest-side, rgba(245,158,11,0.3) 45%, rgba(245,158,11,0.13) 75%, rgba(245,158,11,0) 100%);border-radius:66% 34% 42% 58% / 48% 55% 45% 52%;filter:blur(36px)"></div>
+                  <div class="absolute inset-0" style="background:linear-gradient(180deg, rgba(10,10,10,0.12) 0%, rgba(10,10,10,0.4) 100%)"></div>
+                  <div class="agent-noise absolute inset-0"></div>
+                  <div class="agent-noise agent-noise-soft absolute inset-0"></div>
+                </div>
+              </div>
+              <div class="relative flex items-center gap-4 pt-2">
+                <span aria-hidden="true" class="relative size-10 shrink-0 overflow-hidden rounded-full ring-1 ring-white/20" style="background:hsl(38 60% 16%)">
+                  <span class="absolute size-7 -left-1 -top-1 motion-safe:animate-[orbit_7s_linear_infinite]" style="transform-origin:65% 65%"><span class="block size-full rounded-full blur-[6px]" style="background:hsl(38 90% 62%);opacity:0.9"></span></span>
+                  <span class="absolute size-7 -right-1 top-2 motion-safe:animate-[counter-orbit_5s_linear_infinite]" style="transform-origin:65% 65%"><span class="block size-full rounded-full blur-[6px]" style="background:hsl(73 90% 62%);opacity:0.9"></span></span>
+                  <span class="absolute size-7 left-1 -bottom-2 motion-safe:animate-[orbit_9s_linear_infinite]" style="transform-origin:65% 65%"><span class="block size-full rounded-full blur-[6px]" style="background:hsl(8 90% 62%);opacity:0.9"></span></span>
+                  <span class="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_35%_25%,rgba(255,255,255,0.45),transparent_55%)]"></span>
+                </span>
+                <div>
+                  <h3 class="text-title leading-tight font-medium text-white" data-i18n="c4.title">Intelligent On-Device Rename</h3>
+                  <p class="mt-1 text-caption text-white/45" data-i18n="c4.tag">On-Device AI</p>
+                </div>
+              </div>
+              <p class="relative mt-5 max-w-[340px] text-body leading-[1.55] font-light text-white/70" data-i18n="c4.desc">
+                Eliminate chaotic downloads like `download(3).pdf`. A lightweight on-device neural model reads document structure and proposes standardized, clutter-free naming conventions.
+              </p>
+            </div>
+            <ul class="mt-3 border-b border-white/10">
+              <li class="border-t border-white/10 first:border-t-0">
+                <button type="button" aria-expanded="false" class="group/row flex w-full items-baseline gap-[10px] py-[12px] text-left">
+                  <svg viewBox="0 0 12 12" aria-hidden="true" class="h-[9px] w-[9px] shrink-0 translate-y-[1px] text-white/35 transition-colors group-hover/row:text-white/70" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M6 1.5v9M1.5 6h9"></path></svg>
+                  <span class="text-[13.5px] leading-[1.5] font-light transition-colors duration-200 text-white/70 group-hover/row:text-white" data-i18n="c4.b1">On-Device Neural</span>
+                </button>
+              </li>
+              <li class="border-t border-white/10 first:border-t-0">
+                <button type="button" aria-expanded="false" class="group/row flex w-full items-baseline gap-[10px] py-[12px] text-left">
+                  <svg viewBox="0 0 12 12" aria-hidden="true" class="h-[9px] w-[9px] shrink-0 translate-y-[1px] text-white/35 transition-colors group-hover/row:text-white/70" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M6 1.5v9M1.5 6h9"></path></svg>
+                  <span class="text-[13.5px] leading-[1.5] font-light transition-colors duration-200 text-white/70 group-hover/row:text-white" data-i18n="c4.b2">Zero Privacy Leak</span>
+                </button>
+              </li>
+            </ul>
+          </article>
+
+          <!-- Card 5: Grounded AI Context (RAG) -->
+          <article data-card class="agent-card flex w-[78vw] max-w-[400px] shrink-0 snap-start flex-col rounded-field p-[26px] transition-colors duration-300">
+            <div class="agent-hero relative overflow-hidden -mx-[26px] -mt-[26px] rounded-t-field px-[26px] pt-[24px] pb-[20px]">
+              <div class="absolute inset-0 opacity-30">
+                <div aria-hidden="true" class="absolute inset-0 overflow-hidden rounded-[inherit]">
+                  <div class="absolute inset-0" style="background-image:linear-gradient(155deg, #171717 0%, #0f0f0f 100%)"></div>
+                  <div class="absolute" style="left:0%;top:-30%;width:200%;height:247%;background:radial-gradient(closest-side, rgba(168,85,247,0.3) 45%, rgba(168,85,247,0.13) 75%, rgba(168,85,247,0) 100%);border-radius:57% 43% 36% 64% / 44% 59% 41% 56%;filter:blur(36px)"></div>
+                  <div class="absolute inset-0" style="background:linear-gradient(180deg, rgba(10,10,10,0.12) 0%, rgba(10,10,10,0.4) 100%)"></div>
+                  <div class="agent-noise absolute inset-0"></div>
+                  <div class="agent-noise agent-noise-soft absolute inset-0"></div>
+                </div>
+              </div>
+              <div class="relative flex items-center gap-4 pt-2">
+                <span aria-hidden="true" class="relative size-10 shrink-0 overflow-hidden rounded-full ring-1 ring-white/20" style="background:hsl(270 60% 16%)">
+                  <span class="absolute size-7 -left-1 -top-1 motion-safe:animate-[orbit_7s_linear_infinite]" style="transform-origin:65% 65%"><span class="block size-full rounded-full blur-[6px]" style="background:hsl(270 90% 62%);opacity:0.9"></span></span>
+                  <span class="absolute size-7 -right-1 top-2 motion-safe:animate-[counter-orbit_5s_linear_infinite]" style="transform-origin:65% 65%"><span class="block size-full rounded-full blur-[6px]" style="background:hsl(305 90% 62%);opacity:0.9"></span></span>
+                  <span class="absolute size-7 left-1 -bottom-2 motion-safe:animate-[orbit_9s_linear_infinite]" style="transform-origin:65% 65%"><span class="block size-full rounded-full blur-[6px]" style="background:hsl(240 90% 62%);opacity:0.9"></span></span>
+                  <span class="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_35%_25%,rgba(255,255,255,0.45),transparent_55%)]"></span>
+                </span>
+                <div>
+                  <h3 class="text-title leading-tight font-medium text-white" data-i18n="c5.title">Grounded AI Context (RAG)</h3>
+                  <p class="mt-1 text-caption text-white/45" data-i18n="c5.tag">AI Grounding</p>
+                </div>
+              </div>
+              <p class="relative mt-5 max-w-[340px] text-body leading-[1.55] font-light text-white/70" data-i18n="c5.desc">
+                Feed ChatGPT, Claude, or local Ollama with verified corporate citations. LLMs receive only permitted departmental snippets, preventing hallucinations and executive data leaks.
+              </p>
+            </div>
+            <ul class="mt-3 border-b border-white/10">
+              <li class="border-t border-white/10 first:border-t-0">
+                <button type="button" aria-expanded="false" class="group/row flex w-full items-baseline gap-[10px] py-[12px] text-left">
+                  <svg viewBox="0 0 12 12" aria-hidden="true" class="h-[9px] w-[9px] shrink-0 translate-y-[1px] text-white/35 transition-colors group-hover/row:text-white/70" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M6 1.5v9M1.5 6h9"></path></svg>
+                  <span class="text-[13.5px] leading-[1.5] font-light transition-colors duration-200 text-white/70 group-hover/row:text-white" data-i18n="c5.b1">Zero Hallucinations</span>
+                </button>
+              </li>
+              <li class="border-t border-white/10 first:border-t-0">
+                <button type="button" aria-expanded="false" class="group/row flex w-full items-baseline gap-[10px] py-[12px] text-left">
+                  <svg viewBox="0 0 12 12" aria-hidden="true" class="h-[9px] w-[9px] shrink-0 translate-y-[1px] text-white/35 transition-colors group-hover/row:text-white/70" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M6 1.5v9M1.5 6h9"></path></svg>
+                  <span class="text-[13.5px] leading-[1.5] font-light transition-colors duration-200 text-white/70 group-hover/row:text-white" data-i18n="c5.b2">Model Agnostic</span>
+                </button>
+              </li>
+            </ul>
+          </article>
+
+          <!-- Card 6: Self-Hosted Private Stack -->
+          <article data-card class="agent-card flex w-[78vw] max-w-[400px] shrink-0 snap-start flex-col rounded-field p-[26px] transition-colors duration-300">
+            <div class="agent-hero relative overflow-hidden -mx-[26px] -mt-[26px] rounded-t-field px-[26px] pt-[24px] pb-[20px]">
+              <div class="absolute inset-0 opacity-30">
+                <div aria-hidden="true" class="absolute inset-0 overflow-hidden rounded-[inherit]">
+                  <div class="absolute inset-0" style="background-image:linear-gradient(155deg, #171717 0%, #0f0f0f 100%)"></div>
+                  <div class="absolute" style="left:-4%;top:-45%;width:204%;height:252%;background:radial-gradient(closest-side, rgba(6,182,212,0.3) 45%, rgba(6,182,212,0.13) 75%, rgba(6,182,212,0) 100%);border-radius:66% 34% 42% 58% / 48% 55% 45% 52%;filter:blur(36px)"></div>
+                  <div class="absolute inset-0" style="background:linear-gradient(180deg, rgba(10,10,10,0.12) 0%, rgba(10,10,10,0.4) 100%)"></div>
+                  <div class="agent-noise absolute inset-0"></div>
+                  <div class="agent-noise agent-noise-soft absolute inset-0"></div>
+                </div>
+              </div>
+              <div class="relative flex items-center gap-4 pt-2">
+                <span aria-hidden="true" class="relative size-10 shrink-0 overflow-hidden rounded-full ring-1 ring-white/20" style="background:hsl(189 60% 16%)">
+                  <span class="absolute size-7 -left-1 -top-1 motion-safe:animate-[orbit_7s_linear_infinite]" style="transform-origin:65% 65%"><span class="block size-full rounded-full blur-[6px]" style="background:hsl(189 90% 62%);opacity:0.9"></span></span>
+                  <span class="absolute size-7 -right-1 top-2 motion-safe:animate-[counter-orbit_5s_linear_infinite]" style="transform-origin:65% 65%"><span class="block size-full rounded-full blur-[6px]" style="background:hsl(224 90% 62%);opacity:0.9"></span></span>
+                  <span class="absolute size-7 left-1 -bottom-2 motion-safe:animate-[orbit_9s_linear_infinite]" style="transform-origin:65% 65%"><span class="block size-full rounded-full blur-[6px]" style="background:hsl(154 90% 62%);opacity:0.9"></span></span>
+                  <span class="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_35%_25%,rgba(255,255,255,0.45),transparent_55%)]"></span>
+                </span>
+                <div>
+                  <h3 class="text-title leading-tight font-medium text-white" data-i18n="c6.title">Self-Hosted Private Stack</h3>
+                  <p class="mt-1 text-caption text-white/45" data-i18n="c6.tag">Deployment</p>
+                </div>
+              </div>
+              <p class="relative mt-5 max-w-[340px] text-body leading-[1.55] font-light text-white/70" data-i18n="c6.desc">
+                Deploy entirely within your enterprise tenant or private VPC. Secrets rotated in HashiCorp Vault with KMS auto-unseal. Client certificates verified at proxy edge with CRL checking.
+              </p>
+            </div>
+            <ul class="mt-3 border-b border-white/10">
+              <li class="border-t border-white/10 first:border-t-0">
+                <button type="button" aria-expanded="false" class="group/row flex w-full items-baseline gap-[10px] py-[12px] text-left">
+                  <svg viewBox="0 0 12 12" aria-hidden="true" class="h-[9px] w-[9px] shrink-0 translate-y-[1px] text-white/35 transition-colors group-hover/row:text-white/70" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M6 1.5v9M1.5 6h9"></path></svg>
+                  <span class="text-[13.5px] leading-[1.5] font-light transition-colors duration-200 text-white/70 group-hover/row:text-white" data-i18n="c6.b1">Vault KMS Unseal</span>
+                </button>
+              </li>
+              <li class="border-t border-white/10 first:border-t-0">
+                <button type="button" aria-expanded="false" class="group/row flex w-full items-baseline gap-[10px] py-[12px] text-left">
+                  <svg viewBox="0 0 12 12" aria-hidden="true" class="h-[9px] w-[9px] shrink-0 translate-y-[1px] text-white/35 transition-colors group-hover/row:text-white/70" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M6 1.5v9M1.5 6h9"></path></svg>
+                  <span class="text-[13.5px] leading-[1.5] font-light transition-colors duration-200 text-white/70 group-hover/row:text-white" data-i18n="c6.b2">mTLS Hardened</span>
+                </button>
+              </li>
+            </ul>
+          </article>
+
+        </div>
+        <div class="mt-2 flex justify-end gap-2.5 px-6 md:hidden">
+          <button type="button" aria-label="Previous card" class="flex size-9 items-center justify-center rounded-full border border-white/15 text-white/70 transition-colors active:border-white/40 active:text-white">
+            <svg viewBox="0 0 16 16" aria-hidden="true" class="h-4 w-4 rotate-180" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5 10.5 8 6 12.5"></path></svg>
+          </button>
+          <button type="button" aria-label="Next card" class="flex size-9 items-center justify-center rounded-full border border-white/15 text-white/70 transition-colors active:border-white/40 active:text-white">
+            <svg viewBox="0 0 16 16" aria-hidden="true" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5 10.5 8 6 12.5"></path></svg>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================================
+         ARCHITECTURE: 5 STEPS (Replicating Nalar Inside the Intelligence Layer)
+         ========================================================================= -->
+    <section id="architecture" class="arch-section border-t border-white/5">
+      <div class="sp-container">
+        <div class="arch-head flex flex-col gap-8 md:flex-row md:items-center md:justify-between mb-14">
+          <div class="arch-head-copy">
+            <p class="text-[12px] font-medium tracking-[0.2em] text-[#dc2626] uppercase mb-2" data-i18n="arch.tag">Architectural Blueprint</p>
+            <h2 class="section-title font-display font-light text-white" data-i18n="arch.title">Inside the Knowledge Layer.</h2>
+            <p class="mt-3 text-sm text-white/60 font-light max-w-[560px]" data-i18n="arch.desc">How SearchPoint connects, parses, and retrieves company knowledge with fail-closed security at every hop.</p>
+          </div>
+          <div class="arch-head-aside">
+            <div class="arch-mesh" aria-hidden="true">
+              <canvas id="arch-mesh-canvas"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 border-white/10 md:grid-cols-5 md:divide-x md:divide-white/10">
+
+          <!-- Step 1 -->
+          <div class="flex flex-col border-t border-white/10 py-[28px] md:min-h-[340px] md:border-t-0 md:px-[22px] md:py-0">
+            <div class="md:my-auto">
+              <div class="nx-glyph" data-drawn="false">
+                <svg width="72" height="72" viewBox="0 0 72 72" fill="none" class="mb-4">
+                  <circle cx="36" cy="36" r="26" class="nx-draw" stroke="#dc2626" stroke-width="1.5" pathLength="1"/>
+                  <path d="M22 36h28M36 22v28" class="nx-draw" stroke="#ffffff" stroke-width="1.5" pathLength="1"/>
+                  <circle cx="36" cy="36" r="3" class="nx-node" fill="#dc2626"/>
+                  <circle cx="36" cy="36" r="6" class="nx-ring" stroke="#dc2626" stroke-width="1"/>
+                </svg>
+              </div>
+              <p class="font-display text-lg font-light text-white" data-i18n="step1.title">01. Delta Ingest</p>
+              <p class="text-xs text-white/60 font-light mt-2 leading-relaxed" data-i18n="step1.desc">
+                Microsoft Graph delta queries and local filesystem watchers discover document updates without copying binaries.
+              </p>
+            </div>
+          </div>
+
+          <!-- Step 2 -->
+          <div class="flex flex-col border-t border-white/10 py-[28px] md:min-h-[340px] md:border-t-0 md:px-[22px] md:py-0">
+            <div class="md:my-auto">
+              <div class="nx-glyph" data-drawn="false">
+                <svg width="72" height="72" viewBox="0 0 72 72" fill="none" class="mb-4">
+                  <rect x="18" y="18" width="36" height="36" rx="6" class="nx-draw" stroke="#3b82f6" stroke-width="1.5" pathLength="1"/>
+                  <path d="M26 30h20M26 38h14M26 44h10" class="nx-draw" stroke="#ffffff" stroke-width="1.5" pathLength="1"/>
+                  <circle cx="48" cy="24" r="2.5" class="nx-node" fill="#3b82f6"/>
+                </svg>
+              </div>
+              <p class="font-display text-lg font-light text-white" data-i18n="step2.title">02. Rust Sandbox</p>
+              <p class="text-xs text-white/60 font-light mt-2 leading-relaxed" data-i18n="step2.desc">
+                Dedicated high-performance Rust worker processes PDF, Office, and OCR in an ephemeral sandbox. Immediate memory purge.
+              </p>
+            </div>
+          </div>
+
+          <!-- Step 3 -->
+          <div class="flex flex-col border-t border-white/10 py-[28px] md:min-h-[340px] md:border-t-0 md:px-[22px] md:py-0">
+            <div class="md:my-auto">
+              <div class="nx-glyph" data-drawn="false">
+                <svg width="72" height="72" viewBox="0 0 72 72" fill="none" class="mb-4">
+                  <path d="M36 14 18 24v16c0 12 18 18 18 18s18-6 18-18V24L36 14z" class="nx-draw" stroke="#10b981" stroke-width="1.5" pathLength="1"/>
+                  <path d="m28 36 6 6 10-10" class="nx-draw" stroke="#ffffff" stroke-width="1.5" pathLength="1"/>
+                  <circle cx="36" cy="38" r="4" class="nx-ring" stroke="#10b981" stroke-width="1"/>
+                </svg>
+              </div>
+              <p class="font-display text-lg font-light text-white" data-i18n="step3.title">03. Purview Snapshot</p>
+              <p class="text-xs text-white/60 font-light mt-2 leading-relaxed" data-i18n="step3.desc">
+                Every record carries its native Entra ID source allow-list (users, groups, public) — the sole signal for query authorization.
+              </p>
+            </div>
+          </div>
+
+          <!-- Step 4 -->
+          <div class="flex flex-col border-t border-white/10 py-[28px] md:min-h-[340px] md:border-t-0 md:px-[22px] md:py-0">
+            <div class="md:my-auto">
+              <div class="nx-glyph" data-drawn="false">
+                <svg width="72" height="72" viewBox="0 0 72 72" fill="none" class="mb-4">
+                  <circle cx="30" cy="30" r="14" class="nx-draw" stroke="#f59e0b" stroke-width="1.5" pathLength="1"/>
+                  <path d="m40 40 16 16" class="nx-draw" stroke="#ffffff" stroke-width="2" pathLength="1"/>
+                  <circle cx="30" cy="30" r="2" class="nx-node" fill="#f59e0b"/>
+                </svg>
+              </div>
+              <p class="font-display text-lg font-light text-white" data-i18n="step4.title">04. OpenSearch Engine</p>
+              <p class="text-xs text-white/60 font-light mt-2 leading-relaxed" data-i18n="step4.desc">
+                Sub-50ms vector and keyword retrieval with boolean operators, fuzzy matching, and multilingual English/Indonesian stemming.
+              </p>
+            </div>
+          </div>
+
+          <!-- Step 5 -->
+          <div class="flex flex-col border-t border-white/10 py-[28px] md:min-h-[340px] md:border-t-0 md:px-[22px] md:py-0">
+            <div class="md:my-auto">
+              <div class="nx-glyph" data-drawn="false">
+                <svg width="72" height="72" viewBox="0 0 72 72" fill="none" class="mb-4">
+                  <path d="M20 20h32v32H20z" class="nx-draw" stroke="#8b5cf6" stroke-width="1.5" pathLength="1"/>
+                  <circle cx="36" cy="36" r="6" class="nx-node" fill="#8b5cf6"/>
+                  <path d="M12 36h8M52 36h8M36 12v8M36 52v8" class="nx-draw" stroke="#ffffff" stroke-width="1.2" pathLength="1"/>
+                </svg>
+              </div>
+              <p class="font-display text-lg font-light text-white" data-i18n="step5.title">05. Grounded RAG</p>
+              <p class="text-xs text-white/60 font-light mt-2 leading-relaxed" data-i18n="step5.desc">
+                Permitted context citations feed your favorite LLM (Claude, ChatGPT, Ollama) with zero hallucinations and zero data leakage.
+              </p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================================
+         ENTERPRISE PURVIEW & SECURITY MATRIX (#security)
+         ========================================================================= -->
+    <section id="security" class="scroll-mt-[80px] border-t border-white/5">
+      <div class="sp-container">
+        <div class="mb-14 text-center max-w-2xl mx-auto">
+          <p class="text-[12px] font-medium tracking-[0.2em] text-[#dc2626] uppercase mb-2" data-i18n="sec.tag">Zero-Trust Framework</p>
+          <h2 class="section-title font-display font-light text-white" data-i18n="sec.title">Your files stay where they are. Permissions intact.</h2>
+          <p class="mt-3 text-sm text-white/60 font-light" data-i18n="sec.desc">SearchPoint never becomes an accidental oversharing engine. If a user cannot open the file in OneDrive, they cannot even see it in search.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+          <!-- Card 1 -->
+          <div class="rounded-2xl gradient-card p-6">
+            <div class="flex items-center gap-3 mb-4">
+              <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-red-500/10 border border-red-500/20 text-[#dc2626]">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              </div>
+              <h4 class="font-display text-lg font-light text-white" data-i18n="s1.title">Document Allow-List</h4>
+            </div>
+            <p class="text-xs text-white/60 font-light leading-relaxed" data-i18n="s1.desc">
+              Every indexed document carries its actual source permissions (users, groups, public) — the sole authorization signal for search visibility.
+            </p>
+          </div>
+
+          <!-- Card 2 -->
+          <div class="rounded-2xl gradient-card p-6">
+            <div class="flex items-center gap-3 mb-4">
+              <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              </div>
+              <h4 class="font-display text-lg font-light text-white" data-i18n="s2.title">Fail-Closed Authorization</h4>
+            </div>
+            <p class="text-xs text-white/60 font-light leading-relaxed" data-i18n="s2.desc">
+              If a document's permission snapshot is missing, corrupt, or incomplete, access is denied. The search engine never defaults to 'visible'.
+            </p>
+          </div>
+
+          <!-- Card 3 -->
+          <div class="rounded-2xl gradient-card p-6">
+            <div class="flex items-center gap-3 mb-4">
+              <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 2l-2 2m-1.5 6.1L16 11l-1.5-1.5M16 11l-3 3-4-4 3-3 4 4z"/><circle cx="7.5" cy="16.5" r="4.5"/></svg>
+              </div>
+              <h4 class="font-display text-lg font-light text-white" data-i18n="s3.title">HashiCorp Vault Secrets</h4>
+            </div>
+            <p class="text-xs text-white/60 font-light leading-relaxed" data-i18n="s3.desc">
+              All credentials, tokens, and keys are stored and rotated in Vault with cloud-KMS auto-unseal (AWS/Azure/GCP) and transit secret workflows.
+            </p>
+          </div>
+
+          <!-- Card 4 -->
+          <div class="rounded-2xl gradient-card p-6">
+            <div class="flex items-center gap-3 mb-4">
+              <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
+              </div>
+              <h4 class="font-display text-lg font-light text-white" data-i18n="s4.title">mTLS &amp; Certificate Revocation</h4>
+            </div>
+            <p class="text-xs text-white/60 font-light leading-relaxed" data-i18n="s4.desc">
+              Client certificates are verified and revocation-checked at the Caddy proxy layer — stolen or expired certificates cannot be replayed.
+            </p>
+          </div>
+
+          <!-- Card 5 -->
+          <div class="rounded-2xl gradient-card p-6">
+            <div class="flex items-center gap-3 mb-4">
+              <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-400">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+              </div>
+              <h4 class="font-display text-lg font-light text-white" data-i18n="s5.title">Truth-Mirroring Deletes</h4>
+            </div>
+            <p class="text-xs text-white/60 font-light leading-relaxed" data-i18n="s5.desc">
+              When a file is deleted, moved, or locked down in OneDrive or SharePoint, it disappears from search instantly. No ghost copies.
+            </p>
+          </div>
+
+          <!-- Card 6 -->
+          <div class="rounded-2xl gradient-card p-6">
+            <div class="flex items-center gap-3 mb-4">
+              <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/></svg>
+              </div>
+              <h4 class="font-display text-lg font-light text-white" data-i18n="s6.title">Complete Audit Logging</h4>
+            </div>
+            <p class="text-xs text-white/60 font-light leading-relaxed" data-i18n="s6.desc">
+              All search queries and document open events are logged and aggregatable per user. Internal metrics listen on private network interfaces only.
+            </p>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================================
+         MANIFESTO (Sticky "Permission Perimeter" Card — distinct from Nalar)
+         ========================================================================= -->
+    <section id="manifesto" class="px-6">
+      <div class="manifesto-track relative">
+        <div class="sp-manifesto-card manifesto-permission flex items-center overflow-hidden">
+
+          <!-- Distinct ambient motif: crimson permission rings, drifting lattice, scan sweep -->
+          <div aria-hidden="true" class="manifesto-perimeter pointer-events-none absolute inset-0">
+            <div class="mp-grid"></div>
+            <div class="mp-rings">
+              <span></span>
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+            <div class="mp-scan"></div>
+          </div>
+
+          <!-- Ambient Floating Cards -->
+          <div aria-hidden="true" class="manifesto-ambient pointer-events-none absolute inset-0">
+            <!-- Floating Card 1 -->
+            <div class="mp-card mp-card-1">
+              <div class="mp-card-inner">
+                <span class="mp-card-source mp-source-blue">OneDrive Business</span>
+                <span class="mp-card-title">Q3_Financial_Audit.xlsx</span>
+                <span class="mp-card-meta">M365 ACL Synchronized</span>
+              </div>
+            </div>
+
+            <!-- Floating Card 2 -->
+            <div class="mp-card mp-card-2">
+              <div class="mp-card-inner">
+                <span class="mp-card-source mp-source-green">HashiCorp Vault</span>
+                <span class="mp-card-title">KMS Auto-Unseal Active</span>
+                <span class="mp-card-meta">Zero Stored Credentials</span>
+              </div>
+            </div>
+
+            <!-- Floating Card 3 -->
+            <div class="mp-card mp-card-3">
+              <div class="mp-card-inner">
+                <span class="mp-card-source mp-source-purple">OpenSearch Engine</span>
+                <span class="mp-card-title">Sub-50ms Multilingual Retrieval</span>
+                <span class="mp-card-meta">English + Indonesian Stemming</span>
+              </div>
+            </div>
+
+            <!-- Floating Card 4 -->
+            <div class="mp-card mp-card-4">
+              <div class="mp-card-inner">
+                <span class="mp-card-source mp-source-red">Security Barrier</span>
+                <span class="mp-card-title">Zero Document Retention</span>
+                <span class="mp-card-meta">Fail-Closed Authorization</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Center Manifesto Typography -->
+          <div class="mp-copy">
+            <p class="mp-eyebrow" data-i18n="man.tag">The Architecture Manifesto</p>
+            <h2 class="section-title font-display font-light text-balance mp-title" data-i18n="man.title">
+              Enterprise search failed because it copied files into secondary silos. The future of knowledge belongs to the <span class="mp-highlight">zero-retention, permission-true layer.</span>
+            </h2>
+            <p class="mp-desc" data-i18n="man.desc">
+              No duplicated file liabilities. No accidental oversharing leaks. Every document stays in its source, protected by the exact same purview that governs your company.
+            </p>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================================
+         CLIENT FAQ ACCORDION (#faq - Dynamic multilingual from searchpoint.js)
+         ========================================================================= -->
+    <section id="faq" class="scroll-mt-24 border-t border-white/5">
+      <div class="sp-container">
+        <div class="faq-head mb-12">
+          <div class="faq-head-copy">
+            <p class="text-[12px] font-medium tracking-[0.2em] text-[#dc2626] uppercase mb-2" data-i18n="faq.tag">Frequently Asked Questions</p>
+            <h2 class="section-title max-w-[580px] font-display font-light text-white" data-i18n="faq.title">Client FAQ &amp; Product Architecture.</h2>
+            <p class="mt-4 text-xs font-light text-white/50 leading-relaxed max-w-[520px]" data-i18n="faq.desc">
+              Answers to common enterprise security and deployment questions, grounded in shipped product behavior.
+            </p>
+          </div>
+        </div>
+
+        <!-- FAQ List Container -->
+        <ul class="faq-list">
+          <!-- Rendered dynamically by searchpoint.js -->
+        </ul>
+      </div>
+    </section>
+
+    <!-- =========================================================================
+         DOWNLOAD / INSTALL CTA (#download) — orbit of MCP connector logos
+         ========================================================================= -->
+    <section id="download" class="text-center border-t border-white/5">
+      <div class="dl-orbit" aria-hidden="true">
+        <div class="dl-ring dl-ring--outer" data-dir="rev">
+          <span class="dl-node" style="--a:0deg;--r:380px"><span class="dl-tile" style="--accent:#34d399"><svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="m12 2 9 5-9 5-9-5 9-5Z"/><path d="m3 12 9 5 9-5"/><path d="m3 17 9 5 9-5"/></svg></span></span>
+          <span class="dl-node" style="--a:60deg;--r:380px"><span class="dl-tile" style="--accent:#f87171"><svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m3 6 9 7 9-7"/></svg></span></span>
+          <span class="dl-node" style="--a:120deg;--r:380px"><span class="dl-tile" style="--accent:#fbbf24"><svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="m8 3 8 0 6 10-4 8H6L2 13Z"/><path d="M8 3 12 11h8"/><path d="M2 13h20"/></svg></span></span>
+          <span class="dl-node" style="--a:180deg;--r:380px"><span class="dl-tile" style="--accent:#f59e0b"><svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span></span>
+          <span class="dl-node" style="--a:240deg;--r:380px"><span class="dl-tile" style="--accent:#22d3ee"><svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M6 9h.01M10 9h.01M6 13h8"/></svg></span></span>
+          <span class="dl-node" style="--a:300deg;--r:380px"><span class="dl-tile" style="--accent:#8b5cf6"><svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg></span></span>
+        </div>
+        <div class="dl-ring dl-ring--mid" data-dir="fwd">
+          <span class="dl-node" style="--a:0deg;--r:270px"><span class="dl-tile" style="--accent:#60a5fa"><svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg></span></span>
+          <span class="dl-node" style="--a:90deg;--r:270px"><span class="dl-tile" style="--accent:#38bdf8"><svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg></span></span>
+          <span class="dl-node" style="--a:180deg;--r:270px"><span class="dl-tile" style="--accent:#a78bfa"><svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span></span>
+          <span class="dl-node" style="--a:270deg;--r:270px"><span class="dl-tile" style="--accent:#c084fc"><svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M2 6h4v12H2z"/><path d="M6 4h13a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6"/><path d="M10 9h6M10 13h6"/></svg></span></span>
+        </div>
+        <div class="dl-ring dl-ring--inner" data-dir="rev">
+          <span class="dl-node" style="--a:0deg;--r:160px"><span class="dl-tile" style="--accent:#fbbf24"><svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M15 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h9l7-7V5a2 2 0 0 0-2-2Z"/><path d="M14 21v-5a2 2 0 0 1 2-2h5"/></svg></span></span>
+          <span class="dl-node" style="--a:180deg;--r:160px"><span class="dl-tile" style="--accent:#4ade80"><svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/><path d="M8.5 9.5c0 3 2 5 5 5l1.5-1.5 2 1.2c-.5 2.3-3 3.3-5.5 2.3-2.5-1-4.5-3-5.5-5.5-1-2.5 0-5 2.3-5.5l1.2 2L8.5 9.5Z"/></svg></span></span>
+        </div>
+      </div>
+
+      <div class="sp-container relative z-10">
+        <span class="text-[12px] font-medium tracking-[0.2em] text-[#dc2626] uppercase block mb-3" data-i18n="dl.tag">Install SearchPoint Desktop</span>
+        <h2 class="section-title font-display font-light text-white" data-i18n="dl.title">Get SearchPoint now.</h2>
+        <p class="mt-4 text-sm sm:text-base text-white/65 font-light max-w-md mx-auto" data-i18n="dl.desc">
+          A fast, native application built for daily productivity and secure AI workflows.
+        </p>
+
+        <!-- OS Download Buttons -->
+        <div class="mt-10 flex flex-wrap items-center justify-center gap-4">
+          <!-- macOS -->
+          <a href="#" class="dl-btn inline-flex items-center gap-3 rounded-full font-semibold text-sm transition-all duration-200 bg-white text-black hover:opacity-90 shadow-lg cursor-pointer">
+            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 4.22c.62-.77 1.05-1.84.93-2.92-1 .04-2.18.66-2.87 1.46-.57.65-1.06 1.74-.93 2.81 1.11.09 2.25-.57 2.87-1.35z"/></svg>
+            <div class="text-left">
+              <span class="block text-[13px] leading-tight" data-i18n="dl.mac">macOS</span>
+              <span class="block text-[10px] text-black/60 font-normal" data-i18n="dl.mac_sub">Apple Silicon &amp; Intel</span>
+            </div>
+          </a>
+
+          <!-- Windows -->
+          <a href="#" class="dl-btn inline-flex items-center gap-3 rounded-full font-semibold text-sm transition-all duration-200 border border-white/15 bg-white/5 text-white hover:bg-white/10 shadow-lg cursor-pointer">
+            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M0 3.449 9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.901-1.8z"/></svg>
+            <div class="text-left">
+              <span class="block text-[13px] leading-tight" data-i18n="dl.win">Windows</span>
+              <span class="block text-[10px] text-white/50 font-normal" data-i18n="dl.win_sub">Windows 11 / 10 x64</span>
+            </div>
+          </a>
+
+          <!-- Linux (Coming Soon) -->
+          <div class="dl-btn inline-flex items-center gap-2 rounded-full border border-white/5 bg-white/[0.02] text-white/40 text-xs font-mono select-none">
+            <span data-i18n="dl.linux">Linux (.deb / .rpm)</span>
+            <span class="px-2 py-0.5 rounded-full bg-white/5 text-[9px] uppercase tracking-wider" data-i18n="dl.coming">Coming Soon</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================================
+         FOOTER
+         ========================================================================= -->
+    <footer class="site-footer border-t border-white/5 bg-black/40">
+      <div class="sp-container footer-main">
+        <div class="footer-brand-block">
+          <div class="flex items-center gap-2.5">
+            <img src="assets/images/hyperjump-white-mark.png" alt="Hyperjump" class="header-logo-img h-5 w-auto opacity-90" />
+            <span class="footer-brand-name font-display font-medium text-base text-white/90">Hyperjump</span>
+          </div>
+          <p class="footer-copy text-xs font-light text-white/40" data-i18n="footer.rights">© 2026 Hyperjump</p>
+        </div>
+
+        <nav aria-label="Footer" class="footer-nav text-xs font-light text-white/50">
+          <a href="#desktop-search" class="transition-colors hover:text-white" data-i18n="nav.search">Desktop Search</a>
+          <a href="#features" class="transition-colors hover:text-white" data-i18n="nav.features">Capabilities</a>
+          <a href="#architecture" class="transition-colors hover:text-white" data-i18n="nav.arch">Architecture</a>
+          <a href="#security" class="transition-colors hover:text-white" data-i18n="nav.security">Security &amp; Purview</a>
+          <a href="#faq" class="transition-colors hover:text-white" data-i18n="nav.faq">FAQ</a>
+          <a href="#download" class="transition-colors hover:text-white" data-i18n="nav.download">Get App</a>
+        </nav>
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- Interactive Scripts & Animations Engine -->
+  <script src="assets/js/searchpoint.js"></script>
+
+  <!-- Connector Atlas: interaction, packet links, autoplay -->
+  <script>
+    (() => {
+      const stage = document.getElementById('clStage');
+      if (!stage) return;
+
+      const svg = document.getElementById('clLinks');
+      const panel = document.getElementById('clPanel');
+      const panelBody = panel.querySelector('.cl-panel-body');
+      const iconEl = document.getElementById('clPanelIcon');
+      const kickerEl = document.getElementById('clPanelKicker');
+      const titleEl = document.getElementById('clPanelTitle');
+      const catEl = document.getElementById('clPanelCat');
+      const descEl = document.getElementById('clPanelDesc');
+      const specsEl = document.getElementById('clPanelSpecs');
+      const statusEl = document.getElementById('clPanelStatus');
+      const nodes = Array.from(stage.querySelectorAll('.cl-node'));
+      const filters = Array.from(document.querySelectorAll('#connectors .cl-filter'));
+      const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+      const getLang = () => (localStorage.getItem('sp_lang') === 'id' ? 'id' : 'en');
+
+      const CAT = {
+        ms: { en: 'Microsoft 365', id: 'Microsoft 365' },
+        identity: { en: 'Identity & RBAC', id: 'Identitas & RBAC' },
+        secrets: { en: 'Secrets Management', id: 'Manajemen Rahasia' },
+        device: { en: 'On-device', id: 'Perangkat' },
+        messaging: { en: 'Messaging', id: 'Perpesanan' },
+        workspace: { en: 'Google Workspace', id: 'Google Workspace' }
+      };
+
+      const SPEC_LABEL = {
+        auth: { en: 'Auth', id: 'Autentikasi' },
+        acl: { en: 'ACL', id: 'ACL' },
+        mode: { en: 'Mode', id: 'Mode' },
+        keys: { en: 'Keys', id: 'Kunci' },
+        audit: { en: 'Audit', id: 'Audit' }
+      };
+
+      const DATA = {
+        onedrive: {
+          plane: { en: 'Document source', id: 'Sumber dokumen' },
+          desc: {
+            en: 'Personal and shared OneDrive files, parsed through Microsoft Graph without ever copying raw binaries.',
+            id: 'Berkas OneDrive pribadi dan bersama, diproses melalui Microsoft Graph tanpa pernah menyalin biner mentah.'
+          },
+          specs: [
+            ['auth', { en: 'OAuth 2.0 · delegated or app-only', id: 'OAuth 2.0 · delegated atau app-only' }],
+            ['acl', { en: 'Native OneDrive permissions', id: 'Izin OneDrive asli' }],
+            ['mode', { en: 'Incremental delta crawl', id: 'Crawl delta inkremental' }]
+          ],
+          status: 'ready'
+        },
+        sharepoint: {
+          plane: { en: 'Site knowledge', id: 'Pengetahuan situs' },
+          desc: {
+            en: 'Document libraries, lists, and site pages across every SharePoint site the tenant authorizes.',
+            id: 'Pustaka dokumen, daftar, dan halaman situs di setiap situs SharePoint yang diotorisasi tenant.'
+          },
+          specs: [
+            ['auth', { en: 'OAuth 2.0 · admin consent', id: 'OAuth 2.0 · persetujuan admin' }],
+            ['acl', { en: 'Purview labels + site / library ACLs', id: 'Label Purview + ACL situs / pustaka' }],
+            ['mode', { en: 'Delta sync per site', id: 'Sinkronisasi delta per situs' }]
+          ],
+          status: 'ready'
+        },
+        outlook: {
+          plane: { en: 'Mail & attachments', id: 'Surel & lampiran' },
+          desc: {
+            en: 'Mailbox metadata and attachment text, scoped to the signed-in user or the whole tenant.',
+            id: 'Metadata kotak surat dan teks lampiran, dibatasi untuk pengguna yang masuk atau seluruh tenant.'
+          },
+          specs: [
+            ['auth', { en: 'Graph app-only or delegated', id: 'Graph app-only atau delegated' }],
+            ['acl', { en: 'Mailbox + folder permissions', id: 'Izin kotak surat + folder' }],
+            ['mode', { en: 'Metadata-first, ephemeral parse', id: 'Metadata dulu, parse sementara' }]
+          ],
+          status: 'ready'
+        },
+        teams: {
+          plane: { en: 'Collaboration', id: 'Kolaborasi' },
+          desc: {
+            en: 'Channel messages, shared files, and meeting notes across Microsoft Teams.',
+            id: 'Pesan kanal, berkas bersama, dan catatan rapat di Microsoft Teams.'
+          },
+          specs: [
+            ['auth', { en: 'OAuth 2.0 · admin consent', id: 'OAuth 2.0 · persetujuan admin' }],
+            ['acl', { en: 'Team, channel & file membership', id: 'Keanggotaan tim, kanal & berkas' }],
+            ['mode', { en: 'Incremental message crawl', id: 'Crawl pesan inkremental' }]
+          ],
+          status: 'ready'
+        },
+        onenote: {
+          plane: { en: 'Notebooks', id: 'Buku catatan' },
+          desc: {
+            en: 'Section and page content from OneNote notebooks, indexed with notebook permissions intact.',
+            id: 'Konten bagian dan halaman dari buku catatan OneNote, diindeks dengan izin buku catatan tetap utuh.'
+          },
+          specs: [
+            ['auth', { en: 'OAuth 2.0 via Graph', id: 'OAuth 2.0 via Graph' }],
+            ['acl', { en: 'Notebook & section permissions', id: 'Izin buku catatan & bagian' }],
+            ['mode', { en: 'Page-level delta sync', id: 'Sinkronisasi delta per halaman' }]
+          ],
+          status: 'ready'
+        },
+        sticky: {
+          plane: { en: 'Local capture', id: 'Tangkapan lokal' },
+          desc: {
+            en: 'Windows Sticky Notes read straight from the device — never uploaded, never retained.',
+            id: 'Sticky Notes Windows dibaca langsung dari perangkat — tidak pernah diunggah, tidak pernah disimpan.'
+          },
+          specs: [
+            ['auth', { en: 'OS-bound local access', id: 'Akses lokal terikat OS' }],
+            ['acl', { en: 'Device user session only', id: 'Hanya sesi pengguna perangkat' }],
+            ['mode', { en: 'On-device parsing', id: 'Parsing di perangkat' }]
+          ],
+          status: 'ready'
+        },
+        whatsapp: {
+          plane: { en: 'Messaging', id: 'Perpesanan' },
+          desc: {
+            en: 'Desktop chat history parsed locally, with no cloud relay and no message upload.',
+            id: 'Riwayat obrolan desktop diproses secara lokal, tanpa relay cloud dan tanpa unggah pesan.'
+          },
+          specs: [
+            ['auth', { en: 'Device-bound session', id: 'Sesi terikat perangkat' }],
+            ['acl', { en: 'Local user only', id: 'Hanya pengguna lokal' }],
+            ['mode', { en: 'On-device parser', id: 'Parser di perangkat' }]
+          ],
+          status: 'ready'
+        },
+        entra: {
+          plane: { en: 'Identity plane', id: 'Bidang identitas' },
+          desc: {
+            en: 'Entra ID answers who is asking. Native OIDC/OAuth claims decide which documents may appear for this user — on every query, fail-closed.',
+            id: 'Entra ID menjawab siapa yang bertanya. Klaim OIDC/OAuth asli menentukan dokumen mana yang boleh muncul bagi pengguna ini — pada setiap kueri, fail-closed.'
+          },
+          specs: [
+            ['auth', { en: 'OAuth 2.0 / OIDC SSO', id: 'SSO OAuth 2.0 / OIDC' }],
+            ['acl', { en: 'Groups, ACL & Purview claims', id: 'Klaim grup, ACL & Purview' }],
+            ['mode', { en: 'Query-time, fail-closed', id: 'Saat kueri, fail-closed' }]
+          ],
+          status: 'ready'
+        },
+        vault: {
+          plane: { en: 'Secrets plane', id: 'Bidang rahasia' },
+          desc: {
+            en: 'HashiCorp Vault answers how credentials and keys are protected. Connector tokens are issued, rotated, and audited here — never stored in config files.',
+            id: 'HashiCorp Vault menjawab bagaimana kredensial dan kunci dilindungi. Token konektor diterbitkan, dirotasi, dan diaudit di sini — tidak pernah disimpan di berkas konfigurasi.'
+          },
+          specs: [
+            ['auth', { en: 'AppRole · Kubernetes · OIDC', id: 'AppRole · Kubernetes · OIDC' }],
+            ['keys', { en: 'Dynamic credentials + transit', id: 'Kredensial dinamis + transit' }],
+            ['audit', { en: 'KMS auto-unseal (AWS / Azure / GCP)', id: 'Auto-unseal KMS (AWS / Azure / GCP)' }]
+          ],
+          status: 'ready'
+        },
+        local: {
+          plane: { en: 'Local knowledge', id: 'Pengetahuan lokal' },
+          desc: {
+            en: 'Local disks and folders indexed on the device, encrypted at rest, never shipped to a third party.',
+            id: 'Disk dan folder lokal diindeks di perangkat, terenkripsi saat diam, tidak pernah dikirim ke pihak ketiga.'
+          },
+          specs: [
+            ['auth', { en: 'OS keychain + mTLS', id: 'Keychain OS + mTLS' }],
+            ['acl', { en: 'Native filesystem ACLs', id: 'ACL sistem berkas asli' }],
+            ['mode', { en: 'On-device parse + local index', id: 'Parse di perangkat + indeks lokal' }]
+          ],
+          status: 'ready'
+        },
+        gmail: {
+          plane: { en: 'Mail (roadmap)', id: 'Surel (peta jalan)' },
+          desc: {
+            en: 'Planned Gmail connector using Google OAuth, with label-level scoping and the same fail-closed model.',
+            id: 'Konektor Gmail yang direncanakan memakai Google OAuth, dengan cakupan level label dan model fail-closed yang sama.'
+          },
+          specs: [
+            ['auth', { en: 'Google OAuth 2.0 (planned)', id: 'Google OAuth 2.0 (direncanakan)' }],
+            ['acl', { en: 'Gmail labels & delegation', id: 'Label Gmail & delegasi' }],
+            ['mode', { en: 'Roadmap', id: 'Peta jalan' }]
+          ],
+          status: 'soon'
+        },
+        gdrive: {
+          plane: { en: 'Files (roadmap)', id: 'Berkas (peta jalan)' },
+          desc: {
+            en: 'Planned Google Drive connector mapping native Drive permissions into the same authorization model.',
+            id: 'Konektor Google Drive yang direncanakan memetakan izin Drive asli ke model otorisasi yang sama.'
+          },
+          specs: [
+            ['auth', { en: 'Google OAuth 2.0 (planned)', id: 'Google OAuth 2.0 (direncanakan)' }],
+            ['acl', { en: 'Drive file permissions', id: 'Izin berkas Drive' }],
+            ['mode', { en: 'Roadmap', id: 'Peta jalan' }]
+          ],
+          status: 'soon'
+        }
+      };
+
+      let activeKey = 'entra';
+      let autoTimer = null;
+      let paused = false;
+      let interacted = false;
+
+      function layoutNodes() {
+        const rect = stage.getBoundingClientRect();
+        if (!rect.width) return;
+
+        const w = rect.width;
+        const h = rect.height;
+        const base = Math.min(w, h);
+        const innerRadius = base * (w < 520 ? 0.3 : 0.29);
+        const outerRadius = base * (w < 520 ? 0.42 : 0.405);
+
+        nodes.forEach((node) => {
+          const angle = ((parseFloat(node.dataset.angle) || 0) * Math.PI) / 180;
+          const radius = node.dataset.ring === 'outer' ? outerRadius : innerRadius;
+          node.style.left = `${w / 2 + Math.cos(angle) * radius}px`;
+          node.style.top = `${h / 2 + Math.sin(angle) * radius}px`;
+        });
+
+        stage.classList.add('is-ready');
+        drawLinks();
+      }
+
+      function drawLinks() {
+        const rect = stage.getBoundingClientRect();
+        if (!rect.width) return;
+
+        const w = rect.width;
+        const h = rect.height;
+        const cx = w / 2;
+        const cy = h / 2;
+        svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+
+        svg.innerHTML = nodes.map((node) => {
+          const orb = node.querySelector('.cl-node-orb').getBoundingClientRect();
+          const x = orb.left - rect.left + orb.width / 2;
+          const y = orb.top - rect.top + orb.height / 2;
+          const dx = x - cx;
+          const dy = y - cy;
+          const dist = Math.hypot(dx, dy) || 1;
+          const ux = dx / dist;
+          const uy = dy / dist;
+          const x1 = cx + ux * 62;
+          const y1 = cy + uy * 62;
+          const x2 = x - ux * 26;
+          const y2 = y - uy * 26;
+          return `<line data-key="${node.dataset.key}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" />`;
+        }).join('');
+
+        svg.querySelectorAll('line').forEach((line) => {
+          line.classList.toggle('is-active', line.dataset.key === activeKey);
+        });
+      }
+
+      function setActive(key) {
+        const node = nodes.find((item) => item.dataset.key === key);
+        const data = DATA[key];
+        if (!node || !data) return;
+
+        activeKey = key;
+        const lang = getLang();
+        const accent = node.style.getPropertyValue('--accent').trim() || '#ef4444';
+
+        panel.style.setProperty('--accent', accent);
+        iconEl.innerHTML = node.querySelector('.cl-node-icon').innerHTML;
+        kickerEl.textContent = data.plane[lang];
+        titleEl.textContent = node.dataset.name;
+        catEl.textContent = CAT[node.dataset.cat][lang];
+        descEl.textContent = data.desc[lang];
+        specsEl.innerHTML = data.specs.map(([labelKey, value]) => (
+          `<div class="cl-spec"><dt>${SPEC_LABEL[labelKey][lang]}</dt><dd>${value[lang]}</dd></div>`
+        )).join('');
+
+        statusEl.classList.toggle('is-soon', data.status === 'soon');
+        statusEl.innerHTML = `<i></i><span>${data.status === 'soon'
+          ? (lang === 'id' ? 'Peta jalan' : 'Roadmap')
+          : (lang === 'id' ? 'Terhubung' : 'Connected')}</span>`;
+
+        nodes.forEach((item) => item.classList.toggle('is-active', item.dataset.key === key));
+        svg.querySelectorAll('line').forEach((line) => {
+          line.classList.toggle('is-active', line.dataset.key === key);
+        });
+
+        panelBody.style.animation = 'none';
+        void panelBody.offsetWidth;
+        panelBody.style.animation = '';
+      }
+
+      function nextNode() {
+        if (interacted || paused || reducedMotion.matches) return;
+        const pool = nodes.filter((node) => (
+          DATA[node.dataset.key]
+          && DATA[node.dataset.key].status !== 'soon'
+          && !node.classList.contains('is-dim')
+        ));
+        if (!pool.length) return;
+        const index = pool.findIndex((node) => node.dataset.key === activeKey);
+        setActive(pool[(index + 1) % pool.length].dataset.key);
+      }
+
+      function stopAuto() {
+        if (autoTimer) {
+          clearInterval(autoTimer);
+          autoTimer = null;
+        }
+      }
+
+      function startAuto() {
+        stopAuto();
+        if (reducedMotion.matches) return;
+        autoTimer = setInterval(nextNode, 3800);
+      }
+
+      nodes.forEach((node) => {
+        node.addEventListener('click', () => {
+          interacted = true;
+          stopAuto();
+          setActive(node.dataset.key);
+        });
+
+        node.addEventListener('focus', () => {
+          paused = true;
+          stopAuto();
+          setActive(node.dataset.key);
+        });
+
+        node.addEventListener('blur', () => {
+          paused = false;
+        });
+      });
+
+      filters.forEach((button) => {
+        button.addEventListener('click', () => {
+          filters.forEach((item) => {
+            const isActive = item === button;
+            item.classList.toggle('is-active', isActive);
+            item.setAttribute('aria-pressed', String(isActive));
+          });
+
+          const filter = button.dataset.filter;
+          nodes.forEach((node) => {
+            node.classList.toggle('is-dim', filter !== 'all' && node.dataset.cat !== filter);
+          });
+
+          interacted = true;
+          stopAuto();
+
+          const visible = nodes.filter((node) => !node.classList.contains('is-dim') && DATA[node.dataset.key]);
+          if (visible.length && !visible.some((node) => node.dataset.key === activeKey)) {
+            setActive(visible[0].dataset.key);
+          }
+        });
+      });
+
+      stage.addEventListener('pointerenter', () => {
+        paused = true;
+        stopAuto();
+      });
+
+      stage.addEventListener('pointerleave', () => {
+        paused = false;
+        if (!interacted) startAuto();
+      });
+
+      document.addEventListener('click', (event) => {
+        if (event.target.closest('[data-action="set-lang"]')) {
+          setTimeout(() => setActive(activeKey), 0);
+        }
+      });
+
+      if ('ResizeObserver' in window) {
+        new ResizeObserver(() => layoutNodes()).observe(stage);
+      } else {
+        window.addEventListener('resize', layoutNodes);
+      }
+
+      if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(layoutNodes);
+      }
+
+      requestAnimationFrame(() => {
+        layoutNodes();
+        setActive('entra');
+        startAuto();
+      });
+    })();
+  </script>
+</body>
+</html>
